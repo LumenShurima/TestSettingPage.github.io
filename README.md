@@ -19,6 +19,8 @@
             background-color: var(--bg-color); color: var(--text-main);
             font-family: 'Pretendard', -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent; box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         *, *::before, *::after { box-sizing: inherit; }
 
