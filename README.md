@@ -563,7 +563,7 @@
         clearAlarm() { this.writeMap(287, [4]); },
         resetDevice() { if(confirm("장치 리셋?")) this.writeMap(287, [1]); },
         resetModem() { if(confirm("모뎀 리셋?")) this.writeMap(287,[2]); },
-        requestStatus() { SerialManager.write("AT#KTDEVSTAT\r\n"); },
+        requestStatus() { SerialManager.write("AT#KTDEVSTAT"); },
 
         setServerIP(mapAddr, inputId) {
             const ipPort = document.getElementById(inputId).value.split(":");
@@ -611,94 +611,186 @@
     // 4. 수신 데이터 파서 및 프로토콜 파싱
     // ==========================================
     const DeviceParser = {
-        parse(line) {
+          parse(line) {
+            // 1) AT 상태 문자열 파싱 (기존 유지 + 소폭 개선)
             if (line.includes("#RSRP=")) this.update("val-rsrp", this.ext(line, "#RSRP="));
             if (line.includes("#RSSI=")) this.update("val-rssi", this.ext(line, "#RSSI="));
-            if (line.includes("#BAT_AVR_FLOAT=")) this.update("val-battery", parseFloat(this.ext(line, "#BAT_AVR_FLOAT=")).toFixed(2) + " V");
+            if (line.includes("#BAT_AVR_FLOAT=")) {
+              const v = parseFloat(this.ext(line, "#BAT_AVR_FLOAT="));
+              this.update("val-battery", Number.isFinite(v) ? v.toFixed(2) + " V" : "-- V");
+            }
             if (line.includes("#SIM=")) {
-                const sim = this.ext(line, "#SIM=");
-                this.update("val-sim", sim === "1" ? "정상" : (sim === "0" ? "확인중" : "에러"));
+              const sim = this.ext(line, "#SIM=");
+              this.update("val-sim", sim === "1" ? "정상" : (sim === "0" ? "확인중" : "에러"));
             }
             if (line.includes("#tilt_x=")) this.update("val-tilt-x", this.ext(line, "#tilt_x="));
             if (line.includes("#tilt_y=")) this.update("val-tilt-y", this.ext(line, "#tilt_y="));
             if (line.includes("#CHARGER=")) this.update("val-charger", this.ext(line, "#CHARGER="));
-            if (line.includes("#PKG_VER=")) this.update("val-fw", this.ext(line, "#PKG_VER=").split('').join('.'));
-            
-            this.parseProtocol(line);
-        },
-        ext(line, key) {
+            if (line.includes("#PKG_VER=")) this.update("val-fw", this.ext(line, "#PKG_VER=").split("").join("."));
+        
+            // 2) 프로토콜 프레임 파싱 (새 구현)
+            this.parseFrames(line);
+          },
+        
+          // AT류는 '*'가 있기도/없기도 해서 기존 ext 유지
+          ext(line, key) {
             try {
-                const start = line.indexOf(key) + key.length;
-                const end = line.indexOf("*", start);
-                return end !== -1 ? line.substring(start, end).trim() : line.substring(start).trim();
-            } catch(e) { return "--"; }
-        },
-        update(id, val) {
+              const start = line.indexOf(key) + key.length;
+              const end = line.indexOf("*", start);
+              return end !== -1 ? line.substring(start, end).trim() : line.substring(start).trim();
+            } catch (e) {
+              return "--";
+            }
+          },
+        
+          update(id, val) {
             const el = document.getElementById(id);
-            if(el) {
-                el.innerText = val;
-                el.style.color = "var(--accent)";
-                setTimeout(() => el.style.color = "var(--accent)", 500);
+            if (!el) return;
+            const prev = el.style.color;
+            el.innerText = val;
+            el.style.color = "var(--accent)";
+            // 500ms 후 원래색(없으면 기본색)으로 복귀
+            setTimeout(() => { el.style.color = prev || "var(--text-main)"; }, 500);
+          },
+        
+          // ------------------------------
+          // 프로토콜 프레임 파싱 (길이 기반)
+          // 규칙: # + TrID(2) + Len(2) + payload(Len) + *
+          // payload: TID(9) + RW(1) + CODE(2) + DATA(variable)
+          // ------------------------------
+          parseFrames(line) {
+            let i = 0;
+            while (true) {
+              const s = line.indexOf("#", i);
+              if (s < 0) break;
+              const e = line.indexOf("*", s + 1);
+              if (e < 0) break;
+        
+              const frame = line.slice(s, e + 1); // '*' 포함
+              i = e + 1;
+        
+              // #OK 같은 잡 프레임 제외
+              if (frame.startsWith("#OK")) continue;
+        
+              const parsed = this.parseFrame(frame);
+              if (!parsed) continue;
+        
+              this.branchProcess(parsed.codeNum, parsed.data, parsed);
             }
-        },
-        parseProtocol(line) {
-            const s = line.indexOf("#");
-            const e = line.indexOf("*", s);
-            if (s < 0 || e < 0 || line.startsWith("#OK")) return;
-            
-            const frame = line.slice(s, e);
-            const m = frame.slice(5).match(/[rRcCwW](?=\d)/);
-            if (!m) return;
-
-            const rwIdx = 5 + m.index;
-            const cmdStr = frame.substr(rwIdx + 1, 2);
-            let payload = frame.slice(rwIdx + 4);
-            if (payload.endsWith(":")) payload = payload.slice(0, -1);
-
-            this.branchProcess(Number(cmdStr), payload);
-        },
-        branchProcess(cmdNum, payload) {
-            switch(cmdNum) {
-                case 13:
-                    let idx = payload.indexOf(":");
-                    if (idx < 0) return;
-                    const subCmdStr = payload.slice(0, idx);
-                    let Value = payload.slice(idx + 4).split(",");
-                    
-                    if(subCmdStr == 28) {
-                        document.getElementById("touch_transmit").checked = SBA[1] = !!Number(Value[0]);
-                        document.getElementById("emerg_transmit").checked = SBA[2] = !!Number(Value[1]);
-                        document.getElementById("touch_sms").checked = SBA[3] = !!Number(Value[2]);
-                        document.getElementById("emerg_sms").checked = SBA[4] = !!Number(Value[3]);
-                        document.getElementById("touch_light").checked = SBA[6] = !!Number(Value[5]);
-                        document.getElementById("emerg_light").checked = SBA[7] = !!Number(Value[6]);
-                        document.getElementById("touch_mp3").checked = SBA[8] = !!Number(Value[7]);
-                        document.getElementById("emerg_mp3").checked = SBA[9] = !!Number(Value[8]);
-                    } else if(subCmdStr == 154) {
-                        document.getElementById("rf_transmit").checked = SBA[11] = !!Number(Value[0]);
-                        document.getElementById("rf_sms").checked = SBA[12] = !!Number(Value[1]);
-                        document.getElementById("rf_light").checked = SBA[13] = !!Number(Value[2]);
-                        document.getElementById("rf_mp3").checked = SBA[14] = !!Number(Value[3]);
-                    }
-                    break;
-                case 14:
-                    for (const m of payload.matchAll(/([^:]+)(?::|$)/g)) {
-                        if (!m[1].includes(",")) continue;
-                        const [a, b] = m[1].split(",").map(Number);
-                        
-                        if(a == 80) document.getElementById("touch_alram").checked = SBA[0] = !!b;
-                        if(a == 91) document.getElementById("emerg_alram").checked = SBA[5] = !!b;
-                        if(a == 104) document.getElementById("rf_alram").checked = SBA[10] = !!b;
-                        
-                        if(a == 84) document.getElementById("sys_amp").checked = !!b;
-                        if(a == 273) document.getElementById("sys_buzzer").checked = !!b;
-                        if(a == 427) document.getElementById("sys_alc").checked = !!b;
-                    }
-                    break;
+          },
+        
+          parseFrame(frame) {
+            // 최소 길이: # + 2 + 2 + payload(>=12) + *
+            // payload 최소: tid(9)+rw(1)+code(2)=12
+            if (frame.length < 1 + 2 + 2 + 12 + 1) return null;
+            if (frame[0] !== "#" || frame[frame.length - 1] !== "*") return null;
+        
+            const trId = frame.substr(1, 2);
+            const lenStr = frame.substr(3, 2);
+            const payloadLen = Number(lenStr);
+        
+            if (!Number.isFinite(payloadLen) || payloadLen < 12) return null;
+        
+            // 전체 프레임 길이 검증: '#'(1)+trId(2)+len(2)+payload(payloadLen)+'*'(1) = payloadLen + 6
+            const expectedTotal = payloadLen + 6;
+            if (frame.length !== expectedTotal) {
+              // 길이 불일치면 잡음/부분수신 가능성 큼 -> 무시
+              return null;
             }
-        }
-    };
-
+        
+            const payload = frame.substr(5, payloadLen); // 5부터 payloadLen
+            const tid = payload.substr(0, 9);
+            const rw = payload.substr(9, 1);
+            const codeStr = payload.substr(10, 2);
+            const codeNum = Number(codeStr);
+            const data = payload.substr(12); // 나머지
+        
+            if (!Number.isFinite(codeNum)) return null;
+            if (rw !== "R" && rw !== "W" && rw !== "r" && rw !== "w") return null;
+        
+            return { trId, payloadLen, tid, rw, codeStr, codeNum, data, raw: frame };
+          },
+        
+          // ------------------------------
+          // CODE별 처리
+          // ------------------------------
+          branchProcess(cmdNum, data, meta) {
+            // data는 trailing ':'가 붙는 경우가 많아서 여기서 공통 정리
+            const cleaned = (data || "").endsWith(":") ? data.slice(0, -1) : (data || "");
+        
+            switch (cmdNum) {
+              case 13:
+                this.handleCode13(cleaned);
+                break;
+        
+              case 14:
+                this.handleCode14(cleaned);
+                break;
+        
+              default:
+                // 다른 코드면 무시 (필요시 확장)
+                break;
+            }
+          },
+        
+          // CODE 13: "addr:count:csv"
+          handleCode13(data) {
+            // 예: "28:9:0,0,0,0,0,0,0,0,0"
+            const parts = data.split(":");
+            if (parts.length < 3) return;
+        
+            const addr = Number(parts[0]);
+            const count = Number(parts[1]);
+        
+            // 값 영역은 parts[2]가 기본. 뒤에 ':'가 더 붙는 변형이면 join으로 흡수
+            const valuesCsv = parts.slice(2).join(":");
+            const values = valuesCsv.length ? valuesCsv.split(",") : [];
+            // 값은 문자열로 들어오니 Number 변환은 쓰는 쪽에서 필요할 때만
+            // count 검증(엄격히 하려면): values.length === count
+        
+            if (addr === 28) {
+              // "28:9:(n1..n9)" 매핑
+              // 기존 코드의 인덱스 유지
+              const v = values.map(x => Number(x));
+              document.getElementById("touch_transmit").checked = SBA[1] = !!v[0];
+              document.getElementById("emerg_transmit").checked = SBA[2] = !!v[1];
+              document.getElementById("touch_sms").checked = SBA[3] = !!v[2];
+              document.getElementById("emerg_sms").checked = SBA[4] = !!v[3];
+              document.getElementById("touch_light").checked = SBA[6] = !!v[5];
+              document.getElementById("emerg_light").checked = SBA[7] = !!v[6];
+              document.getElementById("touch_mp3").checked = SBA[8] = !!v[7];
+              document.getElementById("emerg_mp3").checked = SBA[9] = !!v[8];
+            } else if (addr === 154) {
+              const v = values.map(x => Number(x));
+              document.getElementById("rf_transmit").checked = SBA[11] = !!v[0];
+              document.getElementById("rf_sms").checked = SBA[12] = !!v[1];
+              document.getElementById("rf_light").checked = SBA[13] = !!v[2];
+              document.getElementById("rf_mp3").checked = SBA[14] = !!v[3];
+            }
+          },
+        
+          // CODE 14: "a,b:a,b:a,b" (콜론으로 레코드 구분)
+          handleCode14(data) {
+            // 예: "80,1:91,1:104,1:84,1:273,1:427,1"
+            const segments = data.split(":").filter(s => s.length);
+            for (const seg of segments) {
+              if (!seg.includes(",")) continue;
+              const [aStr, bStr] = seg.split(",");
+              const a = Number(aStr);
+              const b = Number(bStr);
+              if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+        
+              if (a === 80)  document.getElementById("touch_alram").checked = SBA[0] = !!b;
+              if (a === 91)  document.getElementById("emerg_alram").checked = SBA[5] = !!b;
+              if (a === 104) document.getElementById("rf_alram").checked = SBA[10] = !!b;
+        
+              if (a === 84)  document.getElementById("sys_amp").checked = !!b;
+              if (a === 273) document.getElementById("sys_buzzer").checked = !!b;
+              if (a === 427) document.getElementById("sys_alc").checked = !!b;
+            }
+          }
+        };
+    
     // ==========================================
     // 5. 스위치 UI 이벤트 바인딩
     // ==========================================
