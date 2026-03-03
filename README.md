@@ -27,7 +27,7 @@
         /* 전체 앱 컨테이너 */
         .app-container {
             display: flex; flex-direction: column;
-            width: 100vh; height: 100%; overflow: hidden;
+            width: 100%; height: 100%; overflow: hidden;
         }
 
         /* -------------------------------------------
