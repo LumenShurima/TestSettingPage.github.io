@@ -73,16 +73,22 @@
            메인 스크롤 콘텐츠 영역 (핵심 레이아웃)
         ------------------------------------------- */
         .content-scroll {
-            flex: 1; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch;
-            display: flex; flex-direction: column;
+            flex: 1; 
+            min-height: 0; /* 🔥 [핵심] 컨테이너가 무한정 늘어나는 걸 막아 스크롤을 강제로 활성화합니다! */
+            padding: 16px; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            display: block; /* 모바일에서 Flex 중첩으로 인한 스크롤 꼬임 방지 */
         }
         .page { 
             display: none; 
-            flex: 1 0 auto; /* 🔥 변경된 부분: 콘텐츠가 많아지면 축소되지 않고 늘어나게 하여 스크롤 활성화 */
             flex-direction: column; 
             animation: fadeIn 0.3s ease; 
+            padding-bottom: 40px; /* 맨 아래쪽 버튼이 잘 안 눌리는 것을 방지하기 위한 여백 */
         }
-        .page.active { display: flex; }
+        .page.active { 
+            display: flex; 
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* 카드 및 버튼 UI */
