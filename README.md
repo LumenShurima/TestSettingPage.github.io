@@ -1,246 +1,333 @@
-<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>비상벨 통합 제어 패널</title>
+    <title>비상벨 통합 제어 시스템 (Pro)</title>
     <style>
         :root {
-            --primary: #2563eb; --primary-hover: #1d4ed8;
-            --bg-color: #f3f4f6; --card-bg: #ffffff;
-            --text-main: #1f2937; --text-muted: #6b7280;
-            --border-color: #e5e7eb; --danger: #ef4444; --danger-hover: #dc2626;
-            --success: #10b981; --warning: #f59e0b;
+            --primary: #0f172a; --primary-light: #1e293b; --accent: #3b82f6; --accent-hover: #2563eb;
+            --bg-color: #f1f5f9; --card-bg: #ffffff; --text-main: #334155; --text-muted: #64748b;
+            --border: #e2e8f0; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --sidebar-width: 220px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        /* 공통 헤더 */
-        .header {
-            position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center;
-            background: var(--primary); color: white; padding: 16px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .header h2 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+        /* 사이드바 */
+        .sidebar { width: var(--sidebar-width); background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; background: #020617; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+        .nav-menu { list-style: none; flex: 1; overflow-y: auto; padding: 10px 0; }
+        .nav-item { padding: 14px 20px; cursor: pointer; font-size: 15px; font-weight: 500; border-left: 4px solid transparent; transition: 0.2s; }
+        .nav-item:hover { background: var(--primary-light); }
+        .nav-item.active { background: var(--primary-light); border-left-color: var(--accent); color: #60a5fa; }
 
-        /* 모바일 차단 페이지 */
-        #mobileWarningPage { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; background: white; padding: 20px; }
-        .warning-icon { font-size: 64px; margin-bottom: 20px; }
-        .warning-title { font-size: 24px; font-weight: 800; color: var(--danger); margin-bottom: 15px; }
-        .warning-desc { font-size: 16px; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; word-break: keep-all; }
+        /* 메인 콘텐츠 */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* 메인 페이지 */
-        #mainControlPage { display: none; padding-bottom: 80px; }
-
-        /* 연결 상태 바 */
-        .connection-bar { background: #fff; padding: 12px 20px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color); }
-        .status-indicator { display: flex; align-items: center; gap: 8px; flex: 1; }
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.2); transition: 0.3s; }
+        /* 상단 연결 바 */
+        .topbar { background: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
+        .status-group { display: flex; align-items: center; gap: 12px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
         .status-dot.connected { background: var(--success); box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
         
-        button { cursor: pointer; font-family: inherit; transition: all 0.2s ease; }
-        .btn { padding: 12px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; color: white; }
-        .btn-connect { background: #4b5563; }
-        .btn-connect.connected { background: var(--danger); }
-        .btn-primary { background: var(--primary); }
-        .btn-primary:active { background: var(--primary-hover); }
+        /* 버튼 및 폼 */
+        button { cursor: pointer; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; padding: 10px 16px; transition: 0.2s; color: white; }
+        .btn-accent { background: var(--accent); }
+        .btn-accent:hover { background: var(--accent-hover); }
         .btn-danger { background: var(--danger); }
-        .btn-danger:active { background: var(--danger-hover); }
-        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
-        .btn-outline:active { background: #eff6ff; }
+        .btn-dark { background: var(--primary-light); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-color); }
 
-        /* 탭 메뉴 */
-        .tabs { display: flex; background: #fff; border-bottom: 1px solid var(--border-color); overflow-x: auto; }
-        .tab { flex: 1; text-align: center; padding: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
-        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .tab-content { display: none; padding: 16px; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; width: 100%; }
+        input:focus { border-color: var(--accent); }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* 스크롤 영역 */
+        .content-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+        .page { display: none; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 카드 UI */
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border-color); }
-        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        /* 카드 레이아웃 */
+        .card { background: var(--card-bg); border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
         
-        /* 그리드 레이아웃 */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
         
+        .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .form-row label { width: 140px; font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+
         /* 상태 위젯 */
-        .status-widget { background: var(--bg-color); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
-        .status-widget .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block; }
-        .status-widget .value { font-size: 18px; font-weight: 700; color: var(--primary); }
+        .widget { background: var(--bg-color); padding: 16px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .widget .label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+        .widget .value { font-size: 20px; font-weight: 800; color: var(--accent); }
 
-        /* 입력 폼 */
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
-        .input-row { display: flex; gap: 8px; }
-        input[type="text"], input[type="number"], select { flex: 1; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; outline: none; transition: border 0.2s; }
-        input:focus, select:focus { border-color: var(--primary); }
+        /* 스위치 스타일 (상세 설정용) */
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .switch-row:last-child { border-bottom: none; }
+        .switch-label { font-size: 14px; font-weight: 600; color: var(--text-main); }
+        .switch { position: relative; width: 44px; height: 24px; display: inline-block;}
+        .switch-input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .switch-track { position: absolute; inset: 0; background: #cbd5e1; border-radius: 24px; transition: 0.3s; cursor: pointer; }
+        .switch-thumb { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;}
+        .switch-input:checked ~ .switch-track { background: var(--success); }
+        .switch-input:checked ~ .switch-thumb { transform: translateX(20px); }
 
-        /* 로그 박스 */
-        #logBox { height: 300px; background: #1e293b; color: #a7f3d0; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; overflow-y: auto; border-radius: 8px; line-height: 1.4; }
-        .log-tx { color: #93c5fd; }
-        .log-rx { color: #fde047; }
-        .log-sys { color: #cbd5e1; }
+        /* 터미널 */
+        #logBox { height: calc(100vh - 200px); background: #0f172a; color: #a7f3d0; padding: 16px; font-family: 'Consolas', monospace; font-size: 13px; overflow-y: auto; border-radius: 8px; line-height: 1.5; }
+        .log-tx { color: #93c5fd; } .log-rx { color: #fde047; } .log-sys { color: #94a3b8; }
+
+        /* 모바일 대응 */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; }
+            .sidebar-header { display: none; }
+            .nav-menu { display: flex; padding: 0; }
+            .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+            .nav-item.active { border-left: none; border-bottom-color: var(--accent); }
+            .form-row { flex-direction: column; align-items: flex-start; }
+            .form-row label { width: 100%; margin-bottom: 4px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- [모바일 브라우저 차단 화면] -->
-    <div id="mobileWarningPage">
-        <div class="warning-icon">📱🚫</div>
-        <div class="warning-title">전용 앱 사용 안내</div>
-        <div class="warning-desc">
-            일반 모바일 브라우저에서는 USB 기기 직접 제어 기능을 지원하지 않습니다.<br><br>
-            장치 통신을 위해 <strong>[비상벨 제어 전용 앱]</strong>을 이용해 주시기 바랍니다.
-        </div>
-        <button class="btn btn-primary" style="width: 100%; max-width: 300px;" onclick="alert('앱 다운로드 링크 연결 예정')">안드로이드 앱 다운로드</button>
+    <!-- 좌측 사이드바 -->
+    <div class="sidebar">
+        <div class="sidebar-header">DNS EB SETUP</div>
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="nav('page-dash', this)">대시보드</li>
+            <li class="nav-item" onclick="nav('page-auth', this)">장치 로그인</li>
+            <li class="nav-item" onclick="nav('page-net', this)">네트워크 설정</li>
+            <li class="nav-item" onclick="nav('page-audio', this)">오디오/볼륨</li>
+            <li class="nav-item" onclick="nav('page-rf', this)">무선벨(RF) 등록</li>
+            <li class="nav-item" onclick="nav('page-setting', this)">상세 동작 설정</li>
+            <li class="nav-item" onclick="nav('page-term', this)">터미널 로그</li>
+        </ul>
     </div>
 
-    <!-- [메인 제어 화면] -->
-    <div id="mainControlPage">
-        <div class="header">
-            <h2>🚨 비상벨 통합 제어 패널</h2>
-            <span id="deviceIdDisplay" style="font-size: 13px; opacity: 0.8;">ID: defID9999</span>
-        </div>
-
-        <!-- 연결 UI -->
-        <div id="ui-pc-connection" class="connection-bar" style="display: none;">
-            <div class="status-indicator">
-                <div id="pcStatusDot" class="status-dot"></div>
-                <span id="pcStatusText" style="font-weight: 700; font-size: 14px;">연결대기</span>
-            </div>
-            <select id="baudRate" style="width: auto; padding: 8px;">
-                <option value="9600">9600</option>
-                <option value="115200" selected>115200</option>
-            </select>
-            <button id="btnPcConnect" class="btn btn-connect" onclick="SerialManager.connectPC()">USB 연결</button>
-        </div>
-
-        <div id="ui-app-connection" class="connection-bar" style="display: none; flex-direction: column; align-items: stretch;">
-            <div class="status-indicator" style="margin-bottom: 8px; justify-content: space-between;">
-                <span style="font-size: 13px; color: var(--text-muted);">안드로이드 네이티브 통신</span>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <div id="appStatusDot" class="status-dot"></div>
-                    <span id="appStatusText" style="font-weight: 700; font-size: 14px;">장치 검색중</span>
+    <!-- 우측 메인 -->
+    <div class="main-content">
+        <!-- 상단바 -->
+        <div class="topbar">
+            <div class="status-group">
+                <div id="statusDot" class="status-dot"></div>
+                <div>
+                    <div id="statusText" style="font-weight: 700; font-size: 14px;">연결 대기중</div>
+                    <div id="deviceIdDisplay" style="font-size: 11px; color: var(--text-muted);">Target ID: defID9999</div>
                 </div>
             </div>
-            <button id="btnAppConnect" class="btn btn-primary" onclick="SerialManager.connectApp()">비상벨 장치 연결</button>
+            <div class="status-group">
+                <select id="baudRate" style="width: 100px; padding: 6px;">
+                    <option value="115200" selected>115200</option>
+                    <option value="9600">9600</option>
+                </select>
+                <button id="btnConnect" class="btn-dark" onclick="SerialManager.toggleConnect()">USB 연결</button>
+            </div>
         </div>
 
-        <!-- 탭 메뉴 -->
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('tab-dashboard')">대시보드</div>
-            <div class="tab" onclick="switchTab('tab-settings')">상세설정</div>
-            <div class="tab" onclick="switchTab('tab-terminal')">터미널/로그</div>
-        </div>
-
-        <!-- 탭 1: 대시보드 -->
-        <div id="tab-dashboard" class="tab-content active">
+        <!-- 스크롤 영역 -->
+        <div class="content-scroll">
             
-            <!-- 퀵 컨트롤 -->
-            <div class="card">
-                <div class="card-title">⚡ 빠른 제어 (명령 287)</div>
+            <!-- 1. 대시보드 -->
+            <div id="page-dash" class="page active">
+                <div class="card">
+                    <div class="card-title">⚡ 빠른 제어 (명령 287)</div>
+                    <div class="grid-4">
+                        <button class="btn-danger" onclick="DeviceControl.triggerAlarm()">🚨 경보 발생</button>
+                        <button class="btn-outline" onclick="DeviceControl.clearAlarm()">✅ 경보 해제</button>
+                        <button class="btn-dark" onclick="DeviceControl.resetDevice()">🔄 장치 리셋</button>
+                        <button class="btn-dark" onclick="DeviceControl.resetModem()">📶 모뎀 리셋</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 실시간 상태 모니터링</div>
+                    <div class="grid-4">
+                        <div class="widget"><span class="label">LTE RSRP</span><span class="value" id="val-rsrp">--</span></div>
+                        <div class="widget"><span class="label">LTE RSSI</span><span class="value" id="val-rssi">--</span></div>
+                        <div class="widget"><span class="label">배터리 전압</span><span class="value" id="val-battery">-- V</span></div>
+                        <div class="widget"><span class="label">USIM 상태</span><span class="value" id="val-sim">--</span></div>
+                        <div class="widget"><span class="label">기울기(X)</span><span class="value" id="val-tilt-x">--</span></div>
+                        <div class="widget"><span class="label">기울기(Y)</span><span class="value" id="val-tilt-y">--</span></div>
+                        <div class="widget"><span class="label">충전 상태</span><span class="value" id="val-charger">--</span></div>
+                        <div class="widget"><span class="label">펌웨어 버전</span><span class="value" id="val-fw">--</span></div>
+                    </div>
+                    <button class="btn-outline" style="width: 100%; margin-top: 16px;" onclick="DeviceControl.requestStatus()">상태 새로고침 (AT#KTDEVSTAT)</button>
+                </div>
+            </div>
+
+            <!-- 2. 로그인 -->
+            <div id="page-auth" class="page">
+                <div class="card">
+                    <div class="card-title">🔐 장치 로그인 (Map 30)</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">장치 ID를 기반으로 일일 비밀번호를 자동 생성하여 로그인합니다.</p>
+                    <div class="form-row">
+                        <label>장치 ID (Target)</label>
+                        <input type="text" id="inp-login-id" value="defID9999">
+                    </div>
+                    <div class="form-row">
+                        <label>생성된 비밀번호</label>
+                        <input type="text" id="inp-login-pw" readonly style="background: var(--bg-color);">
+                    </div>
+                    <div class="form-row" style="justify-content: flex-end;">
+                        <button class="btn-outline" onclick="AuthLogic.generatePW()">비밀번호 생성</button>
+                        <button class="btn-accent" onclick="AuthLogic.doLogin()">로그인 실행</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 네트워크 설정 -->
+            <div id="page-net" class="page">
+                <div class="card">
+                    <div class="card-title">🌐 서버 IP 및 포트 (Map 200, 212)</div>
+                    <div class="form-row">
+                        <label>메인 서버 (관제)</label>
+                        <input type="text" id="inp-main-ip" placeholder="192.168.0.1:12100">
+                        <button class="btn-accent" onclick="DeviceControl.setServerIP(200, 'inp-main-ip')">쓰기</button>
+                        <button class="btn-outline" onclick="DeviceControl.readMap(200, 6)">읽기</button>
+                    </div>
+                    <div class="form-row">
+                        <label>제조사 서버 (DMS)</label>
+                        <input type="text" id="inp-dms-ip" placeholder="192.168.0.2:12100">
+                        <button class="btn-accent" onclick="DeviceControl.setServerIP(212, 'inp-dms-ip')">쓰기</button>
+                        <button class="btn-outline" onclick="DeviceControl.readMap(212, 6)">읽기</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">📞 관제 번호 설정 (Map 21, 357)</div>
+                    <div class="form-row">
+                        <label>메인 관제 번호</label>
+                        <input type="text" id="inp-call-1" placeholder="01012345678">
+                        <button class="btn-accent" onclick="DeviceControl.setCallNum('21', 'inp-call-1')">쓰기</button>
+                    </div>
+                    <div class="form-row">
+                        <label>보조 관제 번호</label>
+                        <input type="text" id="inp-call-2" placeholder="01012345678">
+                        <button class="btn-accent" onclick="DeviceControl.setCallNumMap(357, 'inp-call-2')">쓰기</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 오디오/볼륨 -->
+            <div id="page-audio" class="page">
+                <div class="card">
+                    <div class="card-title">🔊 기본 볼륨 (Map 85, 88, 139)</div>
+                    <div class="form-row">
+                        <label>스피커 볼륨 (0~7)</label>
+                        <input type="number" id="inp-vol-spk" min="0" max="7" value="5">
+                        <button class="btn-accent" onclick="DeviceControl.writeMap(85,[document.getElementById('inp-vol-spk').value])">적용</button>
+                    </div>
+                    <div class="form-row">
+                        <label>마이크 볼륨 (0~63)</label>
+                        <input type="number" id="inp-vol-mic" min="0" max="63" value="40">
+                        <button class="btn-accent" onclick="DeviceControl.writeMap(88,[document.getElementById('inp-vol-mic').value])">적용</button>
+                    </div>
+                    <div class="form-row">
+                        <label>MP3 볼륨 (0~30)</label>
+                        <input type="number" id="inp-vol-mp3" min="0" max="30" value="15">
+                        <button class="btn-accent" onclick="DeviceControl.writeMap(139,[document.getElementById('inp-vol-mp3').value])">적용</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 무선벨(RF) -->
+            <div id="page-rf" class="page">
+                <div class="card">
+                    <div class="card-title">📡 무선벨 등록 (Code 25)</div>
+                    <div class="form-row">
+                        <label>저장 번지 (1~32)</label>
+                        <input type="number" id="inp-rf-idx" min="1" max="32" value="1">
+                    </div>
+                    <div class="form-row">
+                        <label>무선벨 ID (4자리)</label>
+                        <input type="text" id="inp-rf-id" maxlength="4" placeholder="A001" value="A001">
+                    </div>
+                    <div class="form-row">
+                        <label>연속 등록 갯수</label>
+                        <input type="number" id="inp-rf-cnt" min="1" max="10" value="1">
+                    </div>
+                    <div class="form-row" style="justify-content: flex-end;">
+                        <button class="btn-outline" onclick="DeviceControl.readRF()">읽기</button>
+                        <button class="btn-danger" onclick="DeviceControl.clearRF()">전체 삭제 (Map 287:92)</button>
+                        <button class="btn-accent" onclick="DeviceControl.registerRF()">등록 (쓰기)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. 상세 동작 설정 (새로 추가된 기능) -->
+            <div id="page-setting" class="page">
                 <div class="grid-2">
-                    <button class="btn btn-danger" onclick="DeviceControl.triggerAlarm()">🚨 경보 발생</button>
-                    <button class="btn btn-outline" onclick="DeviceControl.clearAlarm()">✅ 경보 해제</button>
-                    <button class="btn btn-primary" onclick="DeviceControl.resetDevice()">🔄 장치 리셋</button>
-                    <button class="btn btn-primary" onclick="DeviceControl.resetModem()">📶 모뎀 리셋</button>
-                </div>
-            </div>
+                    <div class="card">
+                        <div class="card-title">터치 동작 설정</div>
+                        <div class="switch-row"><span class="switch-label">경보사용</span><label class="switch"><input type="checkbox" id="touch_alram" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">발신</span><label class="switch"><input type="checkbox" id="touch_transmit" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">SMS</span><label class="switch"><input type="checkbox" id="touch_sms" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">경광등</span><label class="switch"><input type="checkbox" id="touch_light" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">MP3</span><label class="switch"><input type="checkbox" id="touch_mp3" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                    </div>
 
-            <!-- 상태 모니터링 -->
-            <div class="card">
-                <div class="card-title">📊 장치 상태 모니터링</div>
-                <div class="grid-4">
-                    <div class="status-widget">
-                        <span class="label">LTE 신호 (RSRP)</span>
-                        <span class="value" id="val-rsrp">--</span>
+                    <div class="card">
+                        <div class="card-title">이상음원 동작 설정</div>
+                        <div class="switch-row"><span class="switch-label">경보사용</span><label class="switch"><input type="checkbox" id="emerg_alram" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">발신</span><label class="switch"><input type="checkbox" id="emerg_transmit" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">SMS</span><label class="switch"><input type="checkbox" id="emerg_sms" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">경광등</span><label class="switch"><input type="checkbox" id="emerg_light" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">MP3</span><label class="switch"><input type="checkbox" id="emerg_mp3" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                     </div>
-                    <div class="status-widget">
-                        <span class="label">LTE 신호 (RSSI)</span>
-                        <span class="value" id="val-rssi">--</span>
+                    
+                    <div class="card">
+                        <div class="card-title">무선 동작 설정</div>
+                        <div class="switch-row"><span class="switch-label">경보사용</span><label class="switch"><input type="checkbox" id="rf_alram" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">발신</span><label class="switch"><input type="checkbox" id="rf_transmit" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">SMS</span><label class="switch"><input type="checkbox" id="rf_sms" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">경광등</span><label class="switch"><input type="checkbox" id="rf_light" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">MP3</span><label class="switch"><input type="checkbox" id="rf_mp3" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                     </div>
-                    <div class="status-widget">
-                        <span class="label">배터리 전압</span>
-                        <span class="value" id="val-battery">-- V</span>
-                    </div>
-                    <div class="status-widget">
-                        <span class="label">USIM 상태</span>
-                        <span class="value" id="val-sim">--</span>
-                    </div>
-                </div>
-                <button class="btn btn-outline" style="width: 100%; margin-top: 12px;" onclick="DeviceControl.requestStatus()">상태 새로고침</button>
-            </div>
-        </div>
 
-        <!-- 탭 2: 상세설정 -->
-        <div id="tab-settings" class="tab-content">
-            <div class="card">
-                <div class="card-title">🔊 볼륨 설정</div>
-                <div class="form-group">
-                    <label>스피커 볼륨 (Map 85, 0~7)</label>
-                    <div class="input-row">
-                        <input type="number" id="inp-spk-vol" min="0" max="7" value="5">
-                        <button class="btn btn-primary" onclick="DeviceControl.setVolume('spk')">적용</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>마이크 볼륨 (Map 88, 0~63)</label>
-                    <div class="input-row">
-                        <input type="number" id="inp-mic-vol" min="0" max="63" value="40">
-                        <button class="btn btn-primary" onclick="DeviceControl.setVolume('mic')">적용</button>
+                    <div class="card">
+                        <div class="card-title">시스템 부가 설정</div>
+                        <div class="switch-row"><span class="switch-label">앰프(Amp) 사용</span><label class="switch"><input type="checkbox" id="sys_amp" class="switch-input-sys" data-map="84"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">부저(Buzzer) 사용</span><label class="switch"><input type="checkbox" id="sys_buzzer" class="switch-input-sys" data-map="273"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
+                        <div class="switch-row"><span class="switch-label">ALC 사용 (자동 볼륨)</span><label class="switch"><input type="checkbox" id="sys_alc" class="switch-input-sys" data-map="427"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title">📞 관제 번호 설정</div>
-                <div class="form-group">
-                    <label>메인 관제 번호 (Map 21)</label>
-                    <div class="input-row">
-                        <input type="text" id="inp-call-num" placeholder="01012345678">
-                        <button class="btn btn-primary" onclick="DeviceControl.setCallNumber()">적용</button>
+            <!-- 7. 터미널 -->
+            <div id="page-term" class="page">
+                <div class="card" style="padding: 10px; margin-bottom: 10px;">
+                    <div class="form-row" style="margin: 0;">
+                        <input type="text" id="inp-raw-cmd" placeholder="직접 패킷 입력 (예: #0119defID9999R14292,0::*)">
+                        <button class="btn-accent" onclick="DeviceControl.sendRaw()">전송</button>
+                        <button class="btn-outline" onclick="document.getElementById('logBox').innerHTML=''">Clear</button>
                     </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">🌐 서버 IP 설정</div>
-                <div class="form-group">
-                    <label>메인 서버 (Map 200)</label>
-                    <div class="input-row">
-                        <input type="text" id="inp-server-ip" placeholder="192.168.0.1:12100">
-                        <button class="btn btn-primary" onclick="DeviceControl.setServerIP()">적용</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 탭 3: 터미널 -->
-        <div id="tab-terminal" class="tab-content">
-            <div class="card" style="padding: 10px;">
-                <div class="card-title" style="margin-bottom: 8px; padding: 0 6px;">💻 통신 로그</div>
                 <div id="logBox"></div>
-                <div class="input-row" style="margin-top: 10px;">
-                    <input type="text" id="inp-raw-cmd" placeholder="직접 패킷 입력 (#01...)">
-                    <button class="btn btn-primary" onclick="DeviceControl.sendRaw()">전송</button>
-                    <button class="btn btn-outline" onclick="document.getElementById('logBox').innerHTML=''">지우기</button>
-                </div>
             </div>
+
         </div>
     </div>
 
     <script>
+        // 전역 설정 상태 배열 및 ID 맵핑
+        const SBA = Array(15).fill(false);
+        const SWITCH_ID = {
+            0: "touch_alram", 1: "touch_transmit", 2: "emerg_transmit", 3: "touch_sms", 4: "emerg_sms",
+            5: "emerg_alram", 6: "touch_light", 7: "emerg_light", 8: "touch_mp3", 9: "emerg_mp3",
+            10: "rf_alram", 11: "rf_transmit", 12: "rf_sms", 13: "rf_light", 14: "rf_mp3"
+        };
+
         // ==========================================
-        // 1. UI 및 탭 제어
+        // 1. UI 네비게이션
         // ==========================================
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+        function nav(pageId, el) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById(pageId).classList.add('active');
         }
 
         const logBox = document.getElementById("logBox");
@@ -254,38 +341,28 @@
         }
 
         // ==========================================
-        // 2. 환경 감지 (PC Web Serial vs Android App)
-        // ==========================================
-        document.addEventListener("DOMContentLoaded", () => {
-            const isAppEnvironment = typeof window.Android !== "undefined";
-            const isMobileBrowser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-            if (isAppEnvironment) {
-                document.getElementById("mainControlPage").style.display = "block";
-                document.getElementById("ui-app-connection").style.display = "flex";
-                appendLog("안드로이드 전용 앱 모드로 초기화되었습니다.", "sys");
-            } else if (isMobileBrowser) {
-                document.getElementById("mobileWarningPage").style.display = "flex";
-            } else {
-                document.getElementById("mainControlPage").style.display = "block";
-                document.getElementById("ui-pc-connection").style.display = "flex";
-                if (!navigator.serial) {
-                    appendLog("이 브라우저는 Web Serial API를 지원하지 않습니다. (Chrome/Edge 사용 권장)", "sys");
-                    document.getElementById("btnPcConnect").disabled = true;
-                } else {
-                    appendLog("PC Web Serial 통신 모드로 초기화되었습니다.", "sys");
-                }
-            }
-        });
-
-        // ==========================================
-        // 3. 통신 매니저 (SerialManager)
+        // 2. 통신 매니저 (Web Serial + Android)
         // ==========================================
         const SerialManager = {
             port: null, writer: null, reader: null, keepReading: false, isConnected: false,
 
+            async toggleConnect() {
+                if (this.isConnected) {
+                    await this.disconnect();
+                } else {
+                    if (typeof window.Android !== "undefined") {
+                        window.Android.connectUSB();
+                        this.setUI(true);
+                        setTimeout(() => DeviceControl.requestInitialData(), 1000);
+                    } else if (navigator.serial) {
+                        await this.connectPC();
+                    } else {
+                        alert("Web Serial API를 지원하지 않는 브라우저입니다.");
+                    }
+                }
+            },
+
             async connectPC() {
-                if (this.isConnected) { await this.disconnectPC(); return; }
                 try {
                     const baudRate = parseInt(document.getElementById("baudRate").value);
                     this.port = await navigator.serial.requestPort();
@@ -295,61 +372,43 @@
                     textEncoder.readable.pipeTo(this.port.writable);
                     this.writer = textEncoder.writable.getWriter();
                     
-                    this.setUIConnected(true, "PC");
+                    this.setUI(true);
                     appendLog(`포트 열림 (${baudRate}bps)`, "sys");
                     
+                    // 연결 직후 장치 데이터 동기화
+                    setTimeout(() => DeviceControl.requestInitialData(), 500);
+
                     this.keepReading = true;
                     this.readLoopPC();
                 } catch (err) {
-                    appendLog(`PC 연결 실패: ${err.message}`, "sys");
+                    appendLog(`연결 실패: ${err.message}`, "sys");
                 }
             },
 
-            async disconnectPC() {
+            async disconnect() {
                 this.keepReading = false;
                 if (this.reader) { await this.reader.cancel(); this.reader = null; }
                 if (this.writer) { await this.writer.close(); this.writer = null; }
                 if (this.port) { await this.port.close(); this.port = null; }
-                this.setUIConnected(false, "PC");
-                appendLog("PC 포트 닫힘", "sys");
+                if (typeof window.Android !== "undefined") window.Android.disconnectUSB();
+                
+                this.setUI(false);
+                appendLog("포트 닫힘", "sys");
             },
 
-            connectApp() {
-                if(this.isConnected) {
-                    window.Android.disconnectUSB(); // 가상의 앱 브릿지 함수
-                    this.setUIConnected(false, "App");
-                } else {
-                    window.Android.connectUSB(); 
-                    appendLog("앱에 USB 연결을 요청했습니다.", "sys");
-                    // 실제로는 앱에서 콜백을 주어야 함. 여기서는 즉시 연결된 것으로 UI 처리
-                    this.setUIConnected(true, "App");
-                }
-            },
-
-            setUIConnected(connected, type) {
+            setUI(connected) {
                 this.isConnected = connected;
-                if(type === "PC") {
-                    document.getElementById("pcStatusDot").className = `status-dot ${connected ? 'connected' : ''}`;
-                    document.getElementById("pcStatusText").innerText = connected ? "연결됨" : "연결대기";
-                    document.getElementById("pcStatusText").style.color = connected ? "var(--success)" : "var(--text-main)";
-                    const btn = document.getElementById("btnPcConnect");
-                    btn.innerText = connected ? "연결 해제" : "USB 연결";
-                    btn.className = `btn ${connected ? 'btn-danger' : 'btn-connect'}`;
-                } else {
-                    document.getElementById("appStatusDot").className = `status-dot ${connected ? 'connected' : ''}`;
-                    document.getElementById("appStatusText").innerText = connected ? "장치 연결됨" : "장치 검색중";
-                    document.getElementById("appStatusText").style.color = connected ? "var(--success)" : "var(--text-main)";
-                    const btn = document.getElementById("btnAppConnect");
-                    btn.innerText = connected ? "연결 해제 (앱)" : "비상벨 장치 연결";
-                    btn.className = `btn ${connected ? 'btn-danger' : 'btn-primary'}`;
-                }
+                document.getElementById("statusDot").className = `status-dot ${connected ? 'connected' : ''}`;
+                document.getElementById("statusText").innerText = connected ? "장치 연결됨" : "연결 대기중";
+                document.getElementById("statusText").style.color = connected ? "var(--success)" : "var(--text-main)";
+                const btn = document.getElementById("btnConnect");
+                btn.innerText = connected ? "연결 해제" : "USB 연결";
+                btn.className = connected ? "btn-danger" : "btn-dark";
             },
 
             async write(data) {
-                if (!this.isConnected) { alert("먼저 장치를 연결해주세요."); return; }
-                
+                if (!this.isConnected) return alert("장치를 먼저 연결해주세요.");
                 appendLog(data, "tx");
-                
                 if (typeof window.Android !== "undefined") {
                     window.Android.sendData(data + "\r\n");
                 } else if (this.writer) {
@@ -381,93 +440,91 @@
                         }
                     }
                 } catch (error) {
-                    appendLog(`PC 읽기 오류: ${error}`, "sys");
+                    appendLog(`읽기 오류: ${error}`, "sys");
                 } finally {
                     this.reader.releaseLock();
                 }
             }
         };
 
-        // 앱에서 호출할 전역 수신 함수
-        window.receiveDataFromAndroid = function(data) {
-            SerialManager.onReceiveData(data);
-        };
+        window.receiveDataFromAndroid = function(data) { SerialManager.onReceiveData(data); };
 
         // ==========================================
-        // 4. 비즈니스 로직 (프로토콜 생성 및 파싱)
+        // 3. 비즈니스 로직 (프로토콜 및 제어)
         // ==========================================
-        const targetID = "defID9999"; // 기본 브로드캐스트 ID
+        let targetID = "defID9999"; 
 
         const DeviceControl = {
-            // 패킷 생성 코어 함수 (VB.NET make_packet 완벽 이식)
-            // 형식: #01[길이][ID][R/W][CODE][DATA]*
             makePacket(rw, code, dataStr) {
+                targetID = document.getElementById('inp-login-id').value || "defID9999";
+                document.getElementById('deviceIdDisplay').innerText = `Target ID: ${targetID}`;
+                
                 const trId = "01";
                 const payload = targetID.padStart(9, '0') + rw + code + dataStr;
                 const lengthStr = payload.length.toString().padStart(2, '0');
                 return `#${trId}${lengthStr}${payload}*`;
             },
 
-            // Map 데이터 쓰기 (Code 13: 연속 쓰기)
             writeMap(address, values) {
-                // 형식: 주소:갯수:데이터1,데이터2:
                 const dataStr = `${address}:${values.length}:${values.join(',')}:`;
-                const packet = this.makePacket("W", "13", dataStr);
-                SerialManager.write(packet);
+                SerialManager.write(this.makePacket("W", "13", dataStr));
             },
 
-            // Map 데이터 읽기 (Code 13 Read)
             readMap(address, count) {
                 const dataStr = `${address}:${count}::`;
-                const packet = this.makePacket("R", "13", dataStr);
-                SerialManager.write(packet);
+                SerialManager.write(this.makePacket("R", "13", dataStr));
             },
 
-            // --- 개별 기능 제어 ---
-            triggerAlarm() { this.writeMap(287, [97]); }, // 97: 경보 발생
-            clearAlarm() { this.writeMap(287, [4]); },    // 4: 경보 해제
-            resetDevice() { 
-                if(confirm("장치를 재시작하시겠습니까?")) this.writeMap(287, [1]); 
-            },
-            resetModem() { 
-                if(confirm("LTE 모뎀을 재시작하시겠습니까?")) this.writeMap(287, [2]); 
-            },
-            
-            setVolume(type) {
-                if(type === 'spk') {
-                    const vol = document.getElementById('inp-spk-vol').value;
-                    this.writeMap(85, [vol]); // CODECCTRL_SPK_VOL
-                } else {
-                    const vol = document.getElementById('inp-mic-vol').value;
-                    this.writeMap(88, [vol]); // CODECCTRL_MIC_VOL
-                }
-                alert("볼륨 설정 명령을 전송했습니다.");
+            // 연결 시 초기 데이터 동기화
+            requestInitialData() {
+                SerialManager.write(this.makePacket("R", "14", "80,1:91,1:104,1:84,1:273,1:427,1:")); // 단일설정들
+                SerialManager.write(this.makePacket("R", "13", "28:9:0,0,0,0,0,0,0,0,0:")); // 터치/이상음원
+                SerialManager.write(this.makePacket("R", "13", "154:4:0,0,0,0:")); // 무선동작
             },
 
-            setCallNumber() {
-                const num = document.getElementById('inp-call-num').value.replace(/-/g, "");
-                if(!num) return alert("번호를 입력하세요.");
-                // Code 21: 관제번호 설정
-                const packet = this.makePacket("W", "21", `:${num}:`);
-                SerialManager.write(packet);
-                alert("관제번호 설정 명령을 전송했습니다.");
-            },
+            // 빠른 제어
+            triggerAlarm() { this.writeMap(287, [97]); },
+            clearAlarm() { this.writeMap(287, [4]); },
+            resetDevice() { if(confirm("장치 리셋?")) this.writeMap(287, [1]); },
+            resetModem() { if(confirm("모뎀 리셋?")) this.writeMap(287, [2]); },
+            requestStatus() { SerialManager.write("AT#KTDEVSTAT\r\n"); },
 
-            setServerIP() {
-                const ipPort = document.getElementById('inp-server-ip').value.split(":");
-                if(ipPort.length !== 2) return alert("IP:PORT 형식으로 입력하세요.");
+            // 네트워크 설정
+            setServerIP(mapAddr, inputId) {
+                const ipPort = document.getElementById(inputId).value.split(":");
+                if(ipPort.length !== 2) return alert("IP:PORT 형식 확인");
                 const ips = ipPort[0].split(".");
                 const port = parseInt(ipPort[1]);
-                const portH = Math.floor(port / 256);
-                const portL = port % 256;
-                // Map 200부터 6개 바이트 (IP1, IP2, IP3, IP4, PortH, PortL)
-                this.writeMap(200, [ips[0], ips[1], ips[2], ips[3], portH, portL]);
-                alert("서버 IP 설정 명령을 전송했습니다.");
+                this.writeMap(mapAddr,[ips[0], ips[1], ips[2], ips[3], Math.floor(port/256), port%256]);
             },
 
-            requestStatus() {
-                // 상태 갱신을 위해 AT 커맨드나 특정 맵 읽기 요청
-                SerialManager.write("AT#KTDEVSTAT\r\n");
+            setCallNum(code, inputId) {
+                const num = document.getElementById(inputId).value.replace(/-/g, "");
+                SerialManager.write(this.makePacket("W", code, `:${num}:`));
+            },
+            
+            setCallNumMap(mapAddr, inputId) {
+                const num = document.getElementById(inputId).value.replace(/-/g, "").padEnd(11, '\0');
+                let arr =[];
+                for(let i=0; i<11; i++) arr.push(num.charCodeAt(i));
+                this.writeMap(mapAddr, arr);
+            },
+
+            // 무선벨 (Code 25)
+            registerRF() {
+                const idx = document.getElementById('inp-rf-idx').value.padStart(2, '0');
+                const id = document.getElementById('inp-rf-id').value;
+                const cnt = document.getElementById('inp-rf-cnt').value;
+                let ids =[];
+                for(let i=0; i<cnt; i++) ids.push(id);
+                SerialManager.write(this.makePacket("W", "25", `:${idx}:${ids.join(',')}:`));
+            },
+            readRF() {
+                const idx = document.getElementById('inp-rf-idx').value.padStart(2, '0');
+                SerialManager.write(this.makePacket("R", "25", `:${idx}::`));
+            },
+            clearRF() {
+                if(confirm("모든 무선벨을 삭제합니까?")) this.writeMap(287, [92]);
             },
 
             sendRaw() {
@@ -476,38 +533,180 @@
             }
         };
 
-        // 데이터 파서 (수신 데이터 UI 업데이트)
+        // ==========================================
+        // 4. 로그인 알고리즘
+        // ==========================================
+        const AuthLogic = {
+            generatePW() {
+                const id = document.getElementById('inp-login-id').value;
+                if(id.length < 4) return alert("ID는 4자리 이상이어야 합니다.");
+                
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const datekey = parseInt(`${y}${m}${d}`);
+
+                let idkey = 0;
+                for(let i=0; i<id.length; i++) idkey += id.charCodeAt(i);
+
+                let pwkey = idkey + datekey;
+                pwkey += Math.floor(datekey / idkey);
+                pwkey += datekey * 3;
+
+                let pwstr = "";
+                for(let i=0; i<=1; i++) {
+                    let h = (pwkey % datekey) + i * 0x13;
+                    let l = Math.floor(pwkey / datekey) + i * 0x17;
+                    let key = h + l;
+                    let b = (key % 0x9) + 0x30;
+                    if(b > 0x39) b -= 1;
+                    if(b > 0x7D) b -= 1;
+                    pwstr += String.fromCharCode(b);
+                }
+                for(let i=2; i<=12; i++) {
+                    let h = (pwkey % datekey) + i * 0x13;
+                    let l = Math.floor(pwkey / datekey) + i * 0x17;
+                    let key = h + l;
+                    let b = key % 128;
+                    if(b < 0x21) b += 0x21;
+                    if(b > 0x7D) b -= 1;
+                    pwstr += String.fromCharCode(b);
+                }
+                
+                document.getElementById('inp-login-pw').value = pwstr;
+                return pwstr;
+            },
+
+            doLogin() {
+                const id = document.getElementById('inp-login-id').value;
+                const pw = this.generatePW();
+                const dataStr = `logID,${id}:LogPW,${pw}:`;
+                SerialManager.write(DeviceControl.makePacket("C", "30", dataStr));
+            }
+        };
+
+        // ==========================================
+        // 5. 수신 데이터 파서 및 프로토콜 파싱
+        // ==========================================
         const DeviceParser = {
             parse(line) {
-                // 디버그 메시지 파싱 (#RSRP=xx* 형태)
-                if (line.includes("#RSRP=")) this.updateVal("val-rsrp", this.extract(line, "#RSRP="));
-                if (line.includes("#RSSI=")) this.updateVal("val-rssi", this.extract(line, "#RSSI="));
-                if (line.includes("#BAT_AVR_FLOAT=")) this.updateVal("val-battery", parseFloat(this.extract(line, "#BAT_AVR_FLOAT=")).toFixed(2) + " V");
+                // AT명령 상태값 파싱
+                if (line.includes("#RSRP=")) this.update("val-rsrp", this.ext(line, "#RSRP="));
+                if (line.includes("#RSSI=")) this.update("val-rssi", this.ext(line, "#RSSI="));
+                if (line.includes("#BAT_AVR_FLOAT=")) this.update("val-battery", parseFloat(this.ext(line, "#BAT_AVR_FLOAT=")).toFixed(2) + " V");
                 if (line.includes("#SIM=")) {
-                    const sim = this.extract(line, "#SIM=");
-                    this.updateVal("val-sim", sim === "1" ? "정상" : (sim === "0" ? "확인중" : "에러"));
+                    const sim = this.ext(line, "#SIM=");
+                    this.update("val-sim", sim === "1" ? "정상" : (sim === "0" ? "확인중" : "에러"));
                 }
-                if (line.includes("#NetState=")) {
-                    const net = this.extract(line, "#NetState=");
-                    // UI에 NetState 표시 공간이 있다면 업데이트
-                }
+                if (line.includes("#tilt_x=")) this.update("val-tilt-x", this.ext(line, "#tilt_x="));
+                if (line.includes("#tilt_y=")) this.update("val-tilt-y", this.ext(line, "#tilt_y="));
+                if (line.includes("#CHARGER=")) this.update("val-charger", this.ext(line, "#CHARGER="));
+                if (line.includes("#PKG_VER=")) this.update("val-fw", this.ext(line, "#PKG_VER=").split('').join('.'));
+                
+                // 프로토콜 패킷 파싱 (스위치 동기화용)
+                this.parseProtocol(line);
             },
-            extract(line, key) {
+            ext(line, key) {
                 try {
                     const start = line.indexOf(key) + key.length;
                     const end = line.indexOf("*", start);
                     return end !== -1 ? line.substring(start, end).trim() : line.substring(start).trim();
                 } catch(e) { return "--"; }
             },
-            updateVal(id, val) {
+            update(id, val) {
                 const el = document.getElementById(id);
                 if(el) {
                     el.innerText = val;
-                    // 값 변경 시 깜빡임 효과 (Blink 로직 포팅)
-                    el.style.color = "var(--primary)";
-                    setTimeout(() => el.style.color = "var(--text-main)", 500);
+                    el.style.color = "var(--accent)";
+                    setTimeout(() => el.style.color = "var(--accent)", 500);
+                }
+            },
+            parseProtocol(line) {
+                const s = line.indexOf("#");
+                const e = line.indexOf("*", s);
+                if (s < 0 || e < 0 || line.startsWith("#OK")) return;
+                
+                const frame = line.slice(s, e);
+                const m = frame.slice(5).match(/[rRcCwW](?=\d)/);
+                if (!m) return;
+
+                const rwIdx = 5 + m.index;
+                const cmdStr = frame.substr(rwIdx + 1, 2);
+                let payload = frame.slice(rwIdx + 4);
+                if (payload.endsWith(":")) payload = payload.slice(0, -1);
+
+                this.branchProcess(Number(cmdStr), payload);
+            },
+            branchProcess(cmdNum, payload) {
+                switch(cmdNum) {
+                    case 13:
+                        let idx = payload.indexOf(":");
+                        if (idx < 0) return;
+                        const subCmdStr = payload.slice(0, idx);
+                        let Value = payload.slice(idx + 4).split(",");
+                        
+                        if(subCmdStr == 28) {
+                            document.getElementById("touch_transmit").checked = SBA[1] = !!Number(Value[0]);
+                            document.getElementById("emerg_transmit").checked = SBA[2] = !!Number(Value[1]);
+                            document.getElementById("touch_sms").checked = SBA[3] = !!Number(Value[2]);
+                            document.getElementById("emerg_sms").checked = SBA[4] = !!Number(Value[3]);
+                            document.getElementById("touch_light").checked = SBA[6] = !!Number(Value[5]);
+                            document.getElementById("emerg_light").checked = SBA[7] = !!Number(Value[6]);
+                            document.getElementById("touch_mp3").checked = SBA[8] = !!Number(Value[7]);
+                            document.getElementById("emerg_mp3").checked = SBA[9] = !!Number(Value[8]);
+                        } else if(subCmdStr == 154) {
+                            document.getElementById("rf_transmit").checked = SBA[11] = !!Number(Value[0]);
+                            document.getElementById("rf_sms").checked = SBA[12] = !!Number(Value[1]);
+                            document.getElementById("rf_light").checked = SBA[13] = !!Number(Value[2]);
+                            document.getElementById("rf_mp3").checked = SBA[14] = !!Number(Value[3]);
+                        }
+                        break;
+                    case 14:
+                        for (const m of payload.matchAll(/([^:]+)(?::|$)/g)) {
+                            if (!m[1].includes(",")) continue;
+                            const [a, b] = m[1].split(",").map(Number);
+                            
+                            // 메인 알람 스위치
+                            if(a == 80) document.getElementById("touch_alram").checked = SBA[0] = !!b;
+                            if(a == 91) document.getElementById("emerg_alram").checked = SBA[5] = !!b;
+                            if(a == 104) document.getElementById("rf_alram").checked = SBA[10] = !!b;
+                            
+                            // 시스템 부가 스위치
+                            if(a == 84) document.getElementById("sys_amp").checked = !!b;
+                            if(a == 273) document.getElementById("sys_buzzer").checked = !!b;
+                            if(a == 427) document.getElementById("sys_alc").checked = !!b;
+                        }
+                        break;
                 }
             }
+        };
+
+        // ==========================================
+        // 6. 스위치 UI 이벤트 바인딩 (초기 로드 시)
+        // ==========================================
+        window.onload = () => {
+            // 터치, 이상음원, 무선벨 세팅 스위치 로직
+            document.querySelectorAll(".switch-input").forEach(input => {
+                input.addEventListener("change", function() {
+                    const idx = Number(Object.keys(SWITCH_ID).find(k => SWITCH_ID[k] === this.id));
+                    if(!isNaN(idx)) SBA[idx] = this.checked;
+                    const n = SBA.map(v => v ? 1 : 0);
+                    
+                    SerialManager.write(DeviceControl.makePacket("W", "14", `80,${n[0]}:91,${n[5]}:104,${n[10]}:`));
+                    SerialManager.write(DeviceControl.makePacket("W", "13", `28:9:${n[1]},${n[2]},${n[3]},${n[4]},1,${n[6]},${n[7]},${n[8]},${n[9]}:`));
+                    SerialManager.write(DeviceControl.makePacket("W", "13", `154:4:${n[11]},${n[12]},${n[13]},${n[14]}:`));
+                });
+            });
+
+            // 시스템(단일 Map) 세팅 스위치 로직
+            document.querySelectorAll(".switch-input-sys").forEach(input => {
+                input.addEventListener("change", function() {
+                    const mapAddr = this.getAttribute("data-map");
+                    const val = this.checked ? 1 : 0;
+                    SerialManager.write(DeviceControl.makePacket("W", "14", `${mapAddr},${val}:`));
+                });
+            });
         };
     </script>
 </body>
