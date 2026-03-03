@@ -16,7 +16,6 @@
         ------------------------------------------- */
         html, body {
             width: 100%; height: 100%; margin: 0; padding: 0;
-            overflow: hidden; /* body 자체는 스크롤 금지 */
             background-color: var(--bg-color); color: var(--text-main);
             font-family: 'Pretendard', -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent; box-sizing: border-box;
@@ -26,7 +25,7 @@
         /* 전체 앱 컨테이너 */
         .app-container {
             display: flex; flex-direction: column;
-            width: 100%; height: 100%; overflow: hidden;
+            width: 100vh; height: 100%; overflow: hidden;
         }
 
         /* -------------------------------------------
