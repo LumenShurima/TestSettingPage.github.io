@@ -76,7 +76,12 @@
             flex: 1; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch;
             display: flex; flex-direction: column;
         }
-        .page { display: none; flex: 1; flex-direction: column; animation: fadeIn 0.3s ease; }
+        .page { 
+            display: none; 
+            flex: 1 0 auto; /* 🔥 변경된 부분: 콘텐츠가 많아지면 축소되지 않고 늘어나게 하여 스크롤 활성화 */
+            flex-direction: column; 
+            animation: fadeIn 0.3s ease; 
+        }
         .page.active { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
