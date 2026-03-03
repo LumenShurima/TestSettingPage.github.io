@@ -2,7 +2,8 @@
 <head>
     <meta charset="UTF-8">
     <!-- 모바일 화면 비율 고정 및 확대 방지 (UI 깨짐 1차 방지) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1">
     <title>비상벨 통합 제어 시스템</title>
     <style>
         :root {
@@ -20,14 +21,13 @@
             font-family: 'Pretendard', -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent; box-sizing: border-box;
             overflow-x: hidden;
-            overflow-y: auto;
         }
         *, *::before, *::after { box-sizing: inherit; }
 
         /* 전체 앱 컨테이너 */
         .app-container {
             display: flex; flex-direction: column;
-            width: 100%; height: 100%; overflow: hidden;
+            width: 100vw; max-width: 100%; height: 100%; overflow: hidden;
         }
 
         /* -------------------------------------------
