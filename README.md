@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -8,31 +9,37 @@
             --primary: #0f172a; --primary-light: #1e293b; --accent: #3b82f6; --accent-hover: #2563eb;
             --bg-color: #f1f5f9; --card-bg: #ffffff; --text-main: #334155; --text-muted: #64748b;
             --border: #e2e8f0; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
-            --sidebar-width: 220px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent;}
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* 사이드바 */
-        .sidebar { width: var(--sidebar-width); background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { padding: 20px; background: #020617; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+        /* 네비게이션 오버레이 (배경 어둡게) */
+        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s; }
+        
+        /* 팝업 사이드바 (드로어 메뉴) */
+        .sidebar { position: fixed; top: 0; left: -280px; width: 260px; height: 100vh; background: var(--primary); color: white; display: flex; flex-direction: column; z-index: 1000; transition: left 0.3s ease; box-shadow: 4px 0 10px rgba(0,0,0,0.2); }
+        .sidebar.open { left: 0; }
+        .sidebar-header { padding: 20px; background: #020617; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-close-menu { background: transparent; border: none; color: white; font-size: 20px; cursor: pointer; padding: 4px; }
         .nav-menu { list-style: none; flex: 1; overflow-y: auto; padding: 10px 0; }
-        .nav-item { padding: 14px 20px; cursor: pointer; font-size: 15px; font-weight: 500; border-left: 4px solid transparent; transition: 0.2s; }
+        .nav-item { padding: 16px 20px; cursor: pointer; font-size: 15px; font-weight: 500; border-left: 4px solid transparent; transition: 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .nav-item:hover { background: var(--primary-light); }
         .nav-item.active { background: var(--primary-light); border-left-color: var(--accent); color: #60a5fa; }
 
         /* 메인 콘텐츠 */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
         
         /* 상단 연결 바 */
-        .topbar { background: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; }
-        .status-group { display: flex; align-items: center; gap: 12px; }
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+        .topbar { background: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 10; flex-wrap: wrap; gap: 10px;}
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .menu-btn { background: transparent; border: none; font-size: 24px; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px;}
+        .status-group { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.2); flex-shrink: 0; }
         .status-dot.connected { background: var(--success); box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
         
         /* 버튼 및 폼 */
-        button { cursor: pointer; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; padding: 10px 16px; transition: 0.2s; color: white; }
+        button { cursor: pointer; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; padding: 10px 16px; transition: 0.2s; color: white; white-space: nowrap; }
         .btn-accent { background: var(--accent); }
         .btn-accent:hover { background: var(--accent-hover); }
         .btn-danger { background: var(--danger); }
@@ -40,66 +47,67 @@
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-outline:hover { background: var(--bg-color); }
 
-        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; width: 100%; }
-        input:focus { border-color: var(--accent); }
+        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; width: 100%; background: #fff; }
+        input:focus, select:focus { border-color: var(--accent); }
 
         /* 스크롤 영역 */
-        .content-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+        .content-scroll { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
         .page { display: none; animation: fadeIn 0.3s; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 카드 레이아웃 */
-        .card { background: var(--card-bg); border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
+        /* 반응형 카드 레이아웃 */
+        .card { background: var(--card-bg); border-radius: 10px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .card-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--primary); border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
         
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+        /* PC/모바일 자동 대응 그리드 */
+        .grid-auto { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .grid-buttons { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
         
         .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
-        .form-row label { width: 140px; font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+        .form-row label { width: 130px; font-size: 13px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
 
         /* 상태 위젯 */
-        .widget { background: var(--bg-color); padding: 16px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .widget .label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; }
-        .widget .value { font-size: 20px; font-weight: 800; color: var(--accent); }
+        .widget { background: var(--bg-color); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .widget .label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; }
+        .widget .value { font-size: 16px; font-weight: 800; color: var(--accent); }
 
         /* 스위치 스타일 (상세 설정용) */
-        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
         .switch-row:last-child { border-bottom: none; }
         .switch-label { font-size: 14px; font-weight: 600; color: var(--text-main); }
-        .switch { position: relative; width: 44px; height: 24px; display: inline-block;}
+        .switch { position: relative; width: 46px; height: 26px; display: inline-block;}
         .switch-input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .switch-track { position: absolute; inset: 0; background: #cbd5e1; border-radius: 24px; transition: 0.3s; cursor: pointer; }
-        .switch-thumb { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;}
+        .switch-track { position: absolute; inset: 0; background: #cbd5e1; border-radius: 26px; transition: 0.3s; cursor: pointer; }
+        .switch-thumb { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;}
         .switch-input:checked ~ .switch-track { background: var(--success); }
         .switch-input:checked ~ .switch-thumb { transform: translateX(20px); }
 
         /* 터미널 */
-        #logBox { height: calc(100vh - 200px); background: #0f172a; color: #a7f3d0; padding: 16px; font-family: 'Consolas', monospace; font-size: 13px; overflow-y: auto; border-radius: 8px; line-height: 1.5; }
+        #logBox { height: calc(100vh - 220px); background: #0f172a; color: #a7f3d0; padding: 12px; font-family: 'Consolas', monospace; font-size: 12px; overflow-y: auto; border-radius: 8px; line-height: 1.5; word-break: break-all;}
         .log-tx { color: #93c5fd; } .log-rx { color: #fde047; } .log-sys { color: #94a3b8; }
 
-        /* 모바일 대응 */
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; }
-            .sidebar-header { display: none; }
-            .nav-menu { display: flex; padding: 0; }
-            .nav-item { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
-            .nav-item.active { border-left: none; border-bottom-color: var(--accent); }
+        /* 모바일 세밀 조정 */
+        @media (max-width: 600px) {
             .form-row { flex-direction: column; align-items: flex-start; }
             .form-row label { width: 100%; margin-bottom: 4px; }
+            .form-row button { width: 100%; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 좌측 사이드바 -->
-    <div class="sidebar">
-        <div class="sidebar-header">DNS EB SETUP</div>
+    <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
+    <div id="sidebarOverlay" class="overlay" onclick="toggleMenu()"></div>
+
+    <!-- 좌측 사이드바 (팝업 형태) -->
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <span>DNS EB SETUP</span>
+            <button class="btn-close-menu" onclick="toggleMenu()">✕</button>
+        </div>
         <ul class="nav-menu">
             <li class="nav-item active" onclick="nav('page-dash', this)">대시보드</li>
-            <li class="nav-item" onclick="nav('page-auth', this)">장치 로그인</li>
             <li class="nav-item" onclick="nav('page-net', this)">네트워크 설정</li>
             <li class="nav-item" onclick="nav('page-audio', this)">오디오/볼륨</li>
             <li class="nav-item" onclick="nav('page-rf', this)">무선벨(RF) 등록</li>
@@ -108,19 +116,24 @@
         </ul>
     </div>
 
-    <!-- 우측 메인 -->
+    <!-- 우측 메인 콘텐츠 -->
     <div class="main-content">
         <!-- 상단바 -->
         <div class="topbar">
-            <div class="status-group">
-                <div id="statusDot" class="status-dot"></div>
-                <div>
-                    <div id="statusText" style="font-weight: 700; font-size: 14px;">연결 대기중</div>
-                    <div id="deviceIdDisplay" style="font-size: 11px; color: var(--text-muted);">Target ID: defID9999</div>
+            <div class="topbar-left">
+                <button class="menu-btn" onclick="toggleMenu()">☰</button>
+                <div class="status-group">
+                    <div id="statusDot" class="status-dot"></div>
+                    <div>
+                        <div id="statusText" style="font-weight: 700; font-size: 14px;">연결 대기중</div>
+                        <div style="font-size: 11px; color: var(--text-muted); display:flex; align-items:center; gap:4px; margin-top:2px;">
+                            ID: <input type="text" id="targetId" value="defID9999" style="padding: 2px 4px; font-size: 11px; width: 85px; border: 1px solid #ccc; border-radius: 4px; background: #fff;">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="status-group">
-                <select id="baudRate" style="width: 100px; padding: 6px;">
+                <select id="baudRate" style="width: 85px; padding: 6px;">
                     <option value="115200" selected>115200</option>
                     <option value="9600">9600</option>
                 </select>
@@ -135,7 +148,7 @@
             <div id="page-dash" class="page active">
                 <div class="card">
                     <div class="card-title">⚡ 빠른 제어 (명령 287)</div>
-                    <div class="grid-4">
+                    <div class="grid-buttons">
                         <button class="btn-danger" onclick="DeviceControl.triggerAlarm()">🚨 경보 발생</button>
                         <button class="btn-outline" onclick="DeviceControl.clearAlarm()">✅ 경보 해제</button>
                         <button class="btn-dark" onclick="DeviceControl.resetDevice()">🔄 장치 리셋</button>
@@ -145,7 +158,7 @@
 
                 <div class="card">
                     <div class="card-title">📊 실시간 상태 모니터링</div>
-                    <div class="grid-4">
+                    <div class="grid-buttons">
                         <div class="widget"><span class="label">LTE RSRP</span><span class="value" id="val-rsrp">--</span></div>
                         <div class="widget"><span class="label">LTE RSSI</span><span class="value" id="val-rssi">--</span></div>
                         <div class="widget"><span class="label">배터리 전압</span><span class="value" id="val-battery">-- V</span></div>
@@ -159,41 +172,25 @@
                 </div>
             </div>
 
-            <!-- 2. 로그인 -->
-            <div id="page-auth" class="page">
-                <div class="card">
-                    <div class="card-title">🔐 장치 로그인 (Map 30)</div>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">장치 ID를 기반으로 일일 비밀번호를 자동 생성하여 로그인합니다.</p>
-                    <div class="form-row">
-                        <label>장치 ID (Target)</label>
-                        <input type="text" id="inp-login-id" value="defID9999">
-                    </div>
-                    <div class="form-row">
-                        <label>생성된 비밀번호</label>
-                        <input type="text" id="inp-login-pw" readonly style="background: var(--bg-color);">
-                    </div>
-                    <div class="form-row" style="justify-content: flex-end;">
-                        <button class="btn-outline" onclick="AuthLogic.generatePW()">비밀번호 생성</button>
-                        <button class="btn-accent" onclick="AuthLogic.doLogin()">로그인 실행</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. 네트워크 설정 -->
+            <!-- 2. 네트워크 설정 -->
             <div id="page-net" class="page">
                 <div class="card">
                     <div class="card-title">🌐 서버 IP 및 포트 (Map 200, 212)</div>
                     <div class="form-row">
                         <label>메인 서버 (관제)</label>
                         <input type="text" id="inp-main-ip" placeholder="192.168.0.1:12100">
-                        <button class="btn-accent" onclick="DeviceControl.setServerIP(200, 'inp-main-ip')">쓰기</button>
-                        <button class="btn-outline" onclick="DeviceControl.readMap(200, 6)">읽기</button>
+                        <div style="display:flex; gap:4px; width:100%;">
+                            <button class="btn-outline" style="flex:1;" onclick="DeviceControl.readMap(200, 6)">읽기</button>
+                            <button class="btn-accent" style="flex:1;" onclick="DeviceControl.setServerIP(200, 'inp-main-ip')">쓰기</button>
+                        </div>
                     </div>
                     <div class="form-row">
                         <label>제조사 서버 (DMS)</label>
                         <input type="text" id="inp-dms-ip" placeholder="192.168.0.2:12100">
-                        <button class="btn-accent" onclick="DeviceControl.setServerIP(212, 'inp-dms-ip')">쓰기</button>
-                        <button class="btn-outline" onclick="DeviceControl.readMap(212, 6)">읽기</button>
+                        <div style="display:flex; gap:4px; width:100%;">
+                            <button class="btn-outline" style="flex:1;" onclick="DeviceControl.readMap(212, 6)">읽기</button>
+                            <button class="btn-accent" style="flex:1;" onclick="DeviceControl.setServerIP(212, 'inp-dms-ip')">쓰기</button>
+                        </div>
                     </div>
                 </div>
                 <div class="card">
@@ -211,7 +208,7 @@
                 </div>
             </div>
 
-            <!-- 4. 오디오/볼륨 -->
+            <!-- 3. 오디오/볼륨 -->
             <div id="page-audio" class="page">
                 <div class="card">
                     <div class="card-title">🔊 기본 볼륨 (Map 85, 88, 139)</div>
@@ -233,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- 5. 무선벨(RF) -->
+            <!-- 4. 무선벨(RF) -->
             <div id="page-rf" class="page">
                 <div class="card">
                     <div class="card-title">📡 무선벨 등록 (Code 25)</div>
@@ -249,17 +246,19 @@
                         <label>연속 등록 갯수</label>
                         <input type="number" id="inp-rf-cnt" min="1" max="10" value="1">
                     </div>
-                    <div class="form-row" style="justify-content: flex-end;">
-                        <button class="btn-outline" onclick="DeviceControl.readRF()">읽기</button>
-                        <button class="btn-danger" onclick="DeviceControl.clearRF()">전체 삭제 (Map 287:92)</button>
-                        <button class="btn-accent" onclick="DeviceControl.registerRF()">등록 (쓰기)</button>
+                    <div class="form-row" style="margin-top: 16px;">
+                        <div style="display:flex; gap:8px; width:100%; flex-wrap:wrap;">
+                            <button class="btn-outline" style="flex:1;" onclick="DeviceControl.readRF()">읽기</button>
+                            <button class="btn-danger" style="flex:1;" onclick="DeviceControl.clearRF()">전체 삭제</button>
+                            <button class="btn-accent" style="flex:1;" onclick="DeviceControl.registerRF()">등록 (쓰기)</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 6. 상세 동작 설정 (새로 추가된 기능) -->
+            <!-- 5. 상세 동작 설정 -->
             <div id="page-setting" class="page">
-                <div class="grid-2">
+                <div class="grid-auto">
                     <div class="card">
                         <div class="card-title">터치 동작 설정</div>
                         <div class="switch-row"><span class="switch-label">경보사용</span><label class="switch"><input type="checkbox" id="touch_alram" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
@@ -296,10 +295,10 @@
                 </div>
             </div>
 
-            <!-- 7. 터미널 -->
+            <!-- 6. 터미널 -->
             <div id="page-term" class="page">
                 <div class="card" style="padding: 10px; margin-bottom: 10px;">
-                    <div class="form-row" style="margin: 0;">
+                    <div class="form-row" style="margin: 0; display:flex; gap:8px;">
                         <input type="text" id="inp-raw-cmd" placeholder="직접 패킷 입력 (예: #0119defID9999R14292,0::*)">
                         <button class="btn-accent" onclick="DeviceControl.sendRaw()">전송</button>
                         <button class="btn-outline" onclick="document.getElementById('logBox').innerHTML=''">Clear</button>
@@ -321,13 +320,31 @@
         };
 
         // ==========================================
-        // 1. UI 네비게이션
+        // 1. UI 네비게이션 및 메뉴 토글
         // ==========================================
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            
+            if (sidebar.classList.contains('open')) {
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.style.opacity = '1', 10);
+            } else {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            }
+        }
+
         function nav(pageId, el) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             document.getElementById(pageId).classList.add('active');
+            // 메뉴 클릭 후 모바일 환경 등을 위해 드로어 닫기
+            if (document.getElementById('sidebar').classList.contains('open')) {
+                toggleMenu();
+            }
         }
 
         const logBox = document.getElementById("logBox");
@@ -357,7 +374,7 @@
                     } else if (navigator.serial) {
                         await this.connectPC();
                     } else {
-                        alert("Web Serial API를 지원하지 않는 브라우저입니다.");
+                        alert("Web Serial API를 지원하지 않는 브라우저입니다. 안드로이드 크롬/PC 크롬을 사용하세요.");
                     }
                 }
             },
@@ -452,15 +469,12 @@
         // ==========================================
         // 3. 비즈니스 로직 (프로토콜 및 제어)
         // ==========================================
-        let targetID = "defID9999"; 
-
         const DeviceControl = {
             makePacket(rw, code, dataStr) {
-                targetID = document.getElementById('inp-login-id').value || "defID9999";
-                document.getElementById('deviceIdDisplay').innerText = `Target ID: ${targetID}`;
-                
+                // 로그인 기능 삭제에 따라 상단 targetId 텍스트 박스 값 직접 참조
+                const tid = document.getElementById('targetId').value || "defID9999";
                 const trId = "01";
-                const payload = targetID.padStart(9, '0') + rw + code + dataStr;
+                const payload = tid.padStart(9, '0') + rw + code + dataStr;
                 const lengthStr = payload.length.toString().padStart(2, '0');
                 return `#${trId}${lengthStr}${payload}*`;
             },
@@ -492,7 +506,7 @@
             // 네트워크 설정
             setServerIP(mapAddr, inputId) {
                 const ipPort = document.getElementById(inputId).value.split(":");
-                if(ipPort.length !== 2) return alert("IP:PORT 형식 확인");
+                if(ipPort.length !== 2) return alert("IP:PORT 형식 확인 (예: 192.168.0.1:12100)");
                 const ips = ipPort[0].split(".");
                 const port = parseInt(ipPort[1]);
                 this.writeMap(mapAddr,[ips[0], ips[1], ips[2], ips[3], Math.floor(port/256), port%256]);
@@ -534,60 +548,7 @@
         };
 
         // ==========================================
-        // 4. 로그인 알고리즘
-        // ==========================================
-        const AuthLogic = {
-            generatePW() {
-                const id = document.getElementById('inp-login-id').value;
-                if(id.length < 4) return alert("ID는 4자리 이상이어야 합니다.");
-                
-                const now = new Date();
-                const y = now.getFullYear();
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const d = String(now.getDate()).padStart(2, '0');
-                const datekey = parseInt(`${y}${m}${d}`);
-
-                let idkey = 0;
-                for(let i=0; i<id.length; i++) idkey += id.charCodeAt(i);
-
-                let pwkey = idkey + datekey;
-                pwkey += Math.floor(datekey / idkey);
-                pwkey += datekey * 3;
-
-                let pwstr = "";
-                for(let i=0; i<=1; i++) {
-                    let h = (pwkey % datekey) + i * 0x13;
-                    let l = Math.floor(pwkey / datekey) + i * 0x17;
-                    let key = h + l;
-                    let b = (key % 0x9) + 0x30;
-                    if(b > 0x39) b -= 1;
-                    if(b > 0x7D) b -= 1;
-                    pwstr += String.fromCharCode(b);
-                }
-                for(let i=2; i<=12; i++) {
-                    let h = (pwkey % datekey) + i * 0x13;
-                    let l = Math.floor(pwkey / datekey) + i * 0x17;
-                    let key = h + l;
-                    let b = key % 128;
-                    if(b < 0x21) b += 0x21;
-                    if(b > 0x7D) b -= 1;
-                    pwstr += String.fromCharCode(b);
-                }
-                
-                document.getElementById('inp-login-pw').value = pwstr;
-                return pwstr;
-            },
-
-            doLogin() {
-                const id = document.getElementById('inp-login-id').value;
-                const pw = this.generatePW();
-                const dataStr = `logID,${id}:LogPW,${pw}:`;
-                SerialManager.write(DeviceControl.makePacket("C", "30", dataStr));
-            }
-        };
-
-        // ==========================================
-        // 5. 수신 데이터 파서 및 프로토콜 파싱
+        // 4. 수신 데이터 파서 및 프로토콜 파싱
         // ==========================================
         const DeviceParser = {
             parse(line) {
@@ -667,12 +628,12 @@
                             if (!m[1].includes(",")) continue;
                             const [a, b] = m[1].split(",").map(Number);
                             
-                            // 메인 알람 스위치
+                            // 메인 알람 스위치 동기화
                             if(a == 80) document.getElementById("touch_alram").checked = SBA[0] = !!b;
                             if(a == 91) document.getElementById("emerg_alram").checked = SBA[5] = !!b;
                             if(a == 104) document.getElementById("rf_alram").checked = SBA[10] = !!b;
                             
-                            // 시스템 부가 스위치
+                            // 시스템 부가 스위치 동기화
                             if(a == 84) document.getElementById("sys_amp").checked = !!b;
                             if(a == 273) document.getElementById("sys_buzzer").checked = !!b;
                             if(a == 427) document.getElementById("sys_alc").checked = !!b;
@@ -683,7 +644,7 @@
         };
 
         // ==========================================
-        // 6. 스위치 UI 이벤트 바인딩 (초기 로드 시)
+        // 5. 스위치 UI 이벤트 바인딩 (초기 로드 시)
         // ==========================================
         window.onload = () => {
             // 터치, 이상음원, 무선벨 세팅 스위치 로직
