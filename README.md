@@ -146,7 +146,19 @@
         .switch-input:checked ~ .switch-thumb { transform: translateX(20px); }
 
         /* 터미널 화면 100% 대응 */
-        #logBox { flex: 1; background: #0f172a; color: #a7f3d0; padding: 12px; font-family: 'Consolas', monospace; font-size: 12px; overflow-y: auto; border-radius: 8px; line-height: 1.5; word-break: break-all; min-height: 300px;}
+        #logBox { 
+            flex: 1 1 auto;
+            background: #0f172a; 
+            overflow-y: auto;
+            color: #a7f3d0; 
+            padding: 12px; 
+            font-family: 'Consolas', monospace; 
+            font-size: 12px; overflow-y: auto; 
+            border-radius: 8px;
+            line-height: 1.5;
+            word-break: break-all;
+            min-height: 540px;
+            }
         .log-tx { color: #93c5fd; } .log-rx { color: #fde047; } .log-sys { color: #94a3b8; }
     </style>
 </head>
@@ -370,6 +382,7 @@
                 </div>
             </div>
             <div id="logBox"></div>
+            <button class="btn-accent" onclick="" style="margin-top: 10px;">⬇️로그 다운로드⬇️</button>
         </div>
 
     </div>
