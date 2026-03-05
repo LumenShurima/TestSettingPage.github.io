@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.4</div>
+<div>Version 1.0.5</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -564,72 +564,62 @@
             }
         },
 
-        // Android 쪽도 줄 단위가 아니라 raw chunk 라고 생각하고 처리
         onReceiveChunk(chunk) {
             if (!chunk) return;
 
-            // 1. NUL 문자만 제거하고, \r, \n은 절대로 지우지 않습니다.
-            // (통신 프로토콜에서 \n은 문장의 끝을 알리는 중요한 역할을 할 수 있습니다)
-            chunk = String(chunk).replace(/\0/g, "");
+            // 1. 들어온 chunk를 그대로 버퍼에 합칩니다.
+            // 주의: 여기서 \n을 지우지 마세요! \n을 지우면 쓰레기 로그와 프레임이 한 줄로 들러붙어 파싱이 더 힘들어집니다.
+            this.rxBuffer += String(chunk).replace(/\0/g, ""); // NUL(빈값)만 제거
 
-            // ❌ 문제의 원인: 여기서 조각(chunk) 단위로 로그를 찍으면 안드로이드에서 줄바꿈이 폭발합니다.
-            // appendLog(chunk, "rx"); 
-
-            // 2. 버퍼에 날것 그대로 누적
-            this.rxBuffer += chunk;
-
-            // 너무 길어져서 비정상 누적되는 경우 보호
+            // 2. 버퍼 오버플로우 보호 (비정상적으로 *가 안 들어와서 쌓이기만 하는 경우 방지)
             if (this.rxBuffer.length > 8192) {
-                const lastSharp = this.rxBuffer.lastIndexOf("#");
-                this.rxBuffer = lastSharp >= 0 ? this.rxBuffer.slice(lastSharp) : "";
-                console.log("수신 버퍼 정리 수행", "sys");
+                // 버퍼가 너무 크면 최근 1024바이트 정도만 남기고 날려버림 (재동기화)
+                this.rxBuffer = this.rxBuffer.slice(-1024);
+                console.warn("[System] 수신 버퍼 오버플로우 초기화");
             }
 
-            // 3. 누적된 버퍼에서 완성된 프레임 추출 시도
+            // 3. 프레임 추출 시도
             this.extractFrames();
         },
 
         extractFrames() {
-            const MAX_BUF = 64 * 1024; // 상한(임의). 모바일에서 버퍼 폭증 방지
-
+            // 버퍼에 데이터가 있는 동안 무한 반복 검사
             while (true) {
-                // 1) 시작 '#' 찾기
-                let start = this.rxBuffer.indexOf("#");
-                if (start < 0) {
-                // '#'이 전혀 없으면 버퍼를 너무 키우지 말고 정리
-                if (this.rxBuffer.length > MAX_BUF) this.rxBuffer = this.rxBuffer.slice(-1024);
-                return;
+                // 1. 버퍼에서 '첫 번째 종료 문자(*)'의 위치를 찾습니다.
+                const endIdx = this.rxBuffer.indexOf('*');
+
+                if (endIdx < 0) {
+                    // '*'가 없다면 아직 프레임이 완성되지 않은 것입니다. 탈출하여 다음 chunk 대기.
+                    break;
                 }
 
-                // start 이전 쓰레기 제거
-                if (start > 0) this.rxBuffer = this.rxBuffer.slice(start);
+                // 2. '*' 이전의 데이터 중에서 '가장 마지막(최근)에 등장한 시작 문자(#)'을 찾습니다.
+                // 핵심 전략: 짝을 이루는 가장 가까운 #을 찾는다.
+                const startIdx = this.rxBuffer.lastIndexOf('#', endIdx);
 
-                // 2) 종료 '*' 찾기 (start 다음부터)
-                let end = this.rxBuffer.indexOf("*", 1);
-                if (end < 0) {
-                // '*'가 아직 안 왔음 → 다만 버퍼가 너무 크면 재동기 시도
-                if (this.rxBuffer.length > MAX_BUF) {
-                    // 뒤쪽에 새로운 '#'가 있으면 그걸 기준으로 재동기
-                    const nextStart = this.rxBuffer.indexOf("#", 1);
-                    if (nextStart > 0) this.rxBuffer = this.rxBuffer.slice(nextStart);
-                    else this.rxBuffer = ""; // 끝까지 없으면 포기
-                }
-                return;
+                if (startIdx < 0) {
+                    // '*'는 있는데 앞에 '#'이 없다면 완전한 쓰레기 데이터입니다.
+                    // '*'를 포함하여 앞부분을 모두 버리고 다음 프레임을 찾습니다.
+                    this.rxBuffer = this.rxBuffer.substring(endIdx + 1);
+                    continue; 
                 }
 
-                // 3) '*' 이전에 또 다른 '#'가 있으면(=중간에 프레임 시작이 또 나옴)
-                //    이전 프레임이 깨졌다고 보고 next '#'로 재동기
-                const nextStartBeforeEnd = this.rxBuffer.indexOf("#", 1);
-                if (nextStartBeforeEnd > 0 && nextStartBeforeEnd < end) {
-                this.rxBuffer = this.rxBuffer.slice(nextStartBeforeEnd);
-                continue;
+                // 3. 완벽한 '#...*' 프레임 추출
+                const rawFrame = this.rxBuffer.substring(startIdx, endIdx + 1);
+
+                // 4. 버퍼 업데이트: 처리된 '*' 이후부터 남깁니다.
+                // (startIdx 이전의 쓰레기 로그 데이터도 이 과정에서 자연스럽게 날아갑니다)
+                this.rxBuffer = this.rxBuffer.substring(endIdx + 1);
+
+                // 5. 추출된 프레임 내부에 혹시 섞여 있을지 모르는 줄바꿈이나 공백을 제거 (순수 프레임화)
+                const cleanFrame = rawFrame.replace(/[\r\n\s]/g, "");
+
+                // 6. 로그 출력 및 파서로 전달
+                if (cleanFrame.length > 2) { 
+                    console.log("[RX Valid Frame]", cleanFrame);
+                    // 여기에 기존 파서 호출 로직 연결
+                    DeviceParser.parseFrame(cleanFrame);
                 }
-
-                const frame = this.rxBuffer.slice(0, end + 1);
-                this.rxBuffer = this.rxBuffer.slice(end + 1);
-
-                appendLog(frame + "\n");
-                DeviceParser.parseFrame(frame);
             }
         },
 
@@ -1108,6 +1098,7 @@
 </script>
 </body>
 </html>
+
 
 
 
