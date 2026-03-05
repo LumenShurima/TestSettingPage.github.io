@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.2</div>
+<div>Version 1.0.3</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -590,30 +590,45 @@
         },
 
         extractFrames() {
+            const MAX_BUF = 64 * 1024; // 상한(임의). 모바일에서 버퍼 폭증 방지
+
             while (true) {
-                // 시작 문자 '#'
+                // 1) 시작 '#' 찾기
                 let start = this.rxBuffer.indexOf("#");
                 if (start < 0) {
-                    this.rxBuffer = "";
-                    return;
+                // '#'이 전혀 없으면 버퍼를 너무 키우지 말고 정리
+                if (this.rxBuffer.length > MAX_BUF) this.rxBuffer = this.rxBuffer.slice(-1024);
+                return;
                 }
 
-                // 시작 전 쓰레기 데이터 제거
-                if (start > 0) {
-                    this.rxBuffer = this.rxBuffer.slice(start);
-                }
+                // start 이전 쓰레기 제거
+                if (start > 0) this.rxBuffer = this.rxBuffer.slice(start);
 
-                // 종료 문자 '*'
-                const end = this.rxBuffer.indexOf("*", 1);
+                // 2) 종료 '*' 찾기 (start 다음부터)
+                let end = this.rxBuffer.indexOf("*", 1);
                 if (end < 0) {
-                    // 아직 프레임 미완성
-                    return;
+                // '*'가 아직 안 왔음 → 다만 버퍼가 너무 크면 재동기 시도
+                if (this.rxBuffer.length > MAX_BUF) {
+                    // 뒤쪽에 새로운 '#'가 있으면 그걸 기준으로 재동기
+                    const nextStart = this.rxBuffer.indexOf("#", 1);
+                    if (nextStart > 0) this.rxBuffer = this.rxBuffer.slice(nextStart);
+                    else this.rxBuffer = ""; // 끝까지 없으면 포기
+                }
+                return;
+                }
+
+                // 3) '*' 이전에 또 다른 '#'가 있으면(=중간에 프레임 시작이 또 나옴)
+                //    이전 프레임이 깨졌다고 보고 next '#'로 재동기
+                const nextStartBeforeEnd = this.rxBuffer.indexOf("#", 1);
+                if (nextStartBeforeEnd > 0 && nextStartBeforeEnd < end) {
+                this.rxBuffer = this.rxBuffer.slice(nextStartBeforeEnd);
+                continue;
                 }
 
                 const frame = this.rxBuffer.slice(0, end + 1);
                 this.rxBuffer = this.rxBuffer.slice(end + 1);
 
-                appendLog(frame + "\n");
+                console.log(frame + "\n");
                 DeviceParser.parseFrame(frame);
             }
         },
@@ -1093,6 +1108,7 @@
 </script>
 </body>
 </html>
+
 
 
 
