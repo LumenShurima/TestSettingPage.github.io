@@ -567,6 +567,14 @@
         onReceiveChunk(chunk) {
             if (!chunk) return;
 
+
+            // Android 쪽에서 흔히 섞이는 문자 정리
+            chunk = String(chunk)
+                .replace(/\0/g, "")    // NUL 제거
+                .replace(/\r/g, "")    // CR 제거
+                // \n은 데이터에 의미가 없으면 제거해도 됨
+                .replace(/\n/g, "");
+
             // 로그는 raw chunk 단위로 남김
             appendLog(chunk, "rx");
 
@@ -1086,3 +1094,4 @@
 </script>
 </body>
 </html>
+
