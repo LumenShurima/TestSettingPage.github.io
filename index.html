@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.3</div>
+<div>Version 1.0.4</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -628,7 +628,7 @@
                 const frame = this.rxBuffer.slice(0, end + 1);
                 this.rxBuffer = this.rxBuffer.slice(end + 1);
 
-                console.log(frame + "\n");
+                appendLog(frame + "\n");
                 DeviceParser.parseFrame(frame);
             }
         },
@@ -1108,6 +1108,7 @@
 </script>
 </body>
 </html>
+
 
 
 
