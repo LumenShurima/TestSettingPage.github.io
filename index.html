@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.5</div>
+<div>Version 1.0.6</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -616,7 +616,7 @@
 
                 // 6. 로그 출력 및 파서로 전달
                 if (cleanFrame.length > 2) { 
-                    console.log("[RX Valid Frame]", cleanFrame);
+                    appendLog(cleanFrame);
                     // 여기에 기존 파서 호출 로직 연결
                     DeviceParser.parseFrame(cleanFrame);
                 }
