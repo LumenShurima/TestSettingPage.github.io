@@ -1,10 +1,11 @@
-<html lang="ko">
+<!DOCTYPE html>
+<html lang="ko">s
 <head>
     <meta charset="UTF-8">
     <!-- 모바일 화면 비율 고정 및 확대 방지 (UI 깨짐 1차 방지) -->
     <meta name="viewport"
       content="width=device-width, initial-scale=1">
-    <title>비상벨 통합 제어 시스템</title>
+    <title>비상벨 제어 시스템</title>
     <style>
         :root {
             --primary: #0f172a; --primary-light: #1e293b; --accent: #3b82f6; --accent-hover: #2563eb;
@@ -147,17 +148,19 @@
 
         /* 터미널 화면 100% 대응 */
         #logBox { 
-            flex: 1 1 auto;
             background: #0f172a; 
+            overflow-x: auto;
             overflow-y: auto;
             color: #a7f3d0; 
             padding: 12px; 
             font-family: 'Consolas', monospace; 
-            font-size: 12px; overflow-y: auto; 
+            font-size: 12px;
             border-radius: 8px;
             line-height: 1.5;
+            white-space: pre; 
             word-break: break-all;
-            min-height: 540px;
+            width: 100%;
+            height: 540px;
             }
         .log-tx { color: #93c5fd; } .log-rx { color: #fde047; } .log-sys { color: #94a3b8; }
     </style>
@@ -182,6 +185,7 @@
             <li class="nav-item" onclick="nav('page-rf', this)">무선벨(RF) 등록</li>
             <li class="nav-item" onclick="nav('page-setting', this)">상세 동작 설정</li>
             <li class="nav-item" onclick="nav('page-term', this)">터미널 로그</li>
+            <li class="nav-item" onclick="nav('page-preferences', this)">설정</li>
         </ul>
     </div>
 
@@ -202,9 +206,11 @@
         <div class="topbar-right">
             <select id="baudRate" style="width: 90px; padding: 8px;">
                 <option value="115200" selected>115200</option>
-                <option value="9600">9600</option>
             </select>
-            <button id="btnConnect" class="btn-dark" onclick="SerialManager.toggleConnect()">USB 연결</button>
+            <div style="display:flex; gap:8px;">
+                <button id="btnReadAll" class="btn-accent" onclick="DeviceControl.requestInitialData()">전체 읽기</button>
+                <button id="btnConnect" class="btn-dark" onclick="SerialManager.toggleConnect()">USB 연결</button>
+            </div>
         </div>
     </div>
 
@@ -218,8 +224,9 @@
                 <div class="grid-buttons">
                     <button class="btn-danger" onclick="DeviceControl.triggerAlarm()">🚨 경보 발생</button>
                     <button class="btn-outline" onclick="DeviceControl.clearAlarm()">✅ 경보 해제</button>
+                    <!-- 미구현
                     <button class="btn-dark" onclick="DeviceControl.resetDevice()">🔄 장치 리셋</button>
-                    <button class="btn-dark" onclick="DeviceControl.resetModem()">📶 모뎀 리셋</button>
+                    <button class="btn-dark" onclick="DeviceControl.resetModem()">📶 모뎀 리셋</button> -->
                 </div>
             </div>
 
@@ -230,9 +237,9 @@
                     <div class="widget"><span class="label">LTE RSSI</span><span class="value" id="val-rssi">--</span></div>
                     <div class="widget"><span class="label">배터리 전압</span><span class="value" id="val-battery">-- V</span></div>
                     <div class="widget"><span class="label">USIM 상태</span><span class="value" id="val-sim">--</span></div>
-                    <div class="widget"><span class="label">기울기(X)</span><span class="value" id="val-tilt-x">--</span></div>
-                    <div class="widget"><span class="label">기울기(Y)</span><span class="value" id="val-tilt-y">--</span></div>
-                    <div class="widget"><span class="label">충전 상태</span><span class="value" id="val-charger">--</span></div>
+                    <div class="widget"><span class="label">기울기(X) - 미구현</span><span class="value" id="val-tilt-x">--</span></div>
+                    <div class="widget"><span class="label">기울기(Y) - 미구현</span><span class="value" id="val-tilt-y">--</span></div>
+                    <div class="widget"><span class="label">충전 상태 - 미구현</span><span class="value" id="val-charger">--</span></div>
                     <div class="widget"><span class="label">펌웨어</span><span class="value" id="val-fw">--</span></div>
                 </div>
                 <button class="btn-outline" style="width: 100%; margin-top: 16px;" onclick="DeviceControl.requestStatus()">상태 새로고침</button>
@@ -247,16 +254,8 @@
                     <label>메인 서버 (관제)</label>
                     <div class="form-inputs">
                         <input type="text" id="inp-main-ip" placeholder="192.168.0.1:12100">
-                        <button class="btn-outline" onclick="DeviceControl.readMap(200, 6)">읽기</button>
+                        <!-- <button class="btn-outline" onclick="DeviceControl.readMap(200, 6)">읽기</button> -->
                         <button class="btn-accent" onclick="DeviceControl.setServerIP(200, 'inp-main-ip')">쓰기</button>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label>제조사 서버 (DMS)</label>
-                    <div class="form-inputs">
-                        <input type="text" id="inp-dms-ip" placeholder="192.168.0.2:12100">
-                        <button class="btn-outline" onclick="DeviceControl.readMap(212, 6)">읽기</button>
-                        <button class="btn-accent" onclick="DeviceControl.setServerIP(212, 'inp-dms-ip')">쓰기</button>
                     </div>
                 </div>
             </div>
@@ -267,13 +266,6 @@
                     <div class="form-inputs">
                         <input type="text" id="inp-call-1" placeholder="01012345678">
                         <button class="btn-accent" onclick="DeviceControl.setCallNum('21', 'inp-call-1')">쓰기</button>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <label>보조 관제 번호</label>
-                    <div class="form-inputs">
-                        <input type="text" id="inp-call-2" placeholder="01012345678">
-                        <button class="btn-accent" onclick="DeviceControl.setCallNumMap(357, 'inp-call-2')">쓰기</button>
                     </div>
                 </div>
             </div>
@@ -324,7 +316,7 @@
                     <div class="form-inputs"><input type="number" id="inp-rf-cnt" min="1" max="10" value="1"></div>
                 </div>
                 <div style="display:flex; gap:8px; margin-top: 16px;">
-                    <button class="btn-outline" style="flex:1;" onclick="DeviceControl.readRF()">읽기</button>
+                    <!-- <button class="btn-outline" style="flex:1;" onclick="DeviceControl.readRF()">읽기</button> -->
                     <button class="btn-danger" style="flex:1;" onclick="DeviceControl.clearRF()">전체 삭제</button>
                     <button class="btn-accent" style="flex:1;" onclick="DeviceControl.registerRF()">등록 (쓰기)</button>
                 </div>
@@ -361,12 +353,14 @@
                     <div class="switch-row"><span class="switch-label">MP3</span><label class="switch"><input type="checkbox" id="rf_mp3" class="switch-input"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                 </div>
 
+
+                <!-- 미구현
                 <div class="card">
                     <div class="card-title">시스템 부가 설정</div>
                     <div class="switch-row"><span class="switch-label">앰프(Amp) 사용</span><label class="switch"><input type="checkbox" id="sys_amp" class="switch-input-sys" data-map="84"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                     <div class="switch-row"><span class="switch-label">부저(Buzzer) 사용</span><label class="switch"><input type="checkbox" id="sys_buzzer" class="switch-input-sys" data-map="273"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
                     <div class="switch-row"><span class="switch-label">ALC 사용 (자동 볼륨)</span><label class="switch"><input type="checkbox" id="sys_alc" class="switch-input-sys" data-map="427"><span class="switch-track"></span><span class="switch-thumb"></span></label></div>
-                </div>
+                </div> -->
             </div>
         </div>
 
@@ -427,12 +421,31 @@
 
     const logBox = document.getElementById("logBox");
 
-    function appendLog(msg, type = 'sys') {
-        const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-        const span = document.createElement('span');
-        span.className = `log-${type}`;
-        span.innerText = `[${time}] ${msg}\n`;
-        logBox.appendChild(span);
+    let lastTimeTag = "";
+
+    function appendLog(msg, type = "sys") {
+        const timeTag = new Date().toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false
+        });
+
+        // 시간 바뀔 때만 "타임스탬프 라인" 추가
+        if (timeTag !== lastTimeTag) {
+            lastTimeTag = timeTag;
+
+            const t = document.createElement("div");
+            t.className = "log-time";              // 스타일 따로 줄 수 있음
+            t.textContent = `[${timeTag}]`;
+            logBox.appendChild(t);
+        }
+
+        // 본문 라인(접두어 없음)
+        const line = document.createElement("div");
+        line.className = `log-${type}`;
+        line.textContent = msg;                   // msg 안의 \n은 CSS가 처리하게
+        logBox.appendChild(line);
+
         logBox.scrollTop = logBox.scrollHeight;
     }
 
@@ -534,7 +547,7 @@
             btn.innerText = connected ? "연결 해제" : "USB 연결";
             btn.className = connected ? "btn-danger" : "btn-dark";
         },
-
+        
         async write(data) {
             if (!this.isConnected) {
                 alert("장치를 먼저 연결해주세요.");
@@ -564,7 +577,7 @@
             if (this.rxBuffer.length > 8192) {
                 const lastSharp = this.rxBuffer.lastIndexOf("#");
                 this.rxBuffer = lastSharp >= 0 ? this.rxBuffer.slice(lastSharp) : "";
-                appendLog("수신 버퍼 정리 수행", "sys");
+                console.log("수신 버퍼 정리 수행", "sys");
             }
 
             this.extractFrames();
@@ -612,7 +625,7 @@
                     }
                 }
             } catch (error) {
-                appendLog(`읽기 오류: ${error}`, "sys");
+                // [임시비활성] console.log(`읽기 오류: ${error}`, "sys");
             } finally {
                 try {
                     this.reader.releaseLock();
@@ -658,9 +671,8 @@
         },
 
         requestInitialData() {
-            SerialManager.write(this.makePacket("R", "14", "80,1:91,1:104,1:84,1:273,1:427,1:"));
-            SerialManager.write(this.makePacket("R", "13", "28:9:0,0,0,0,0,0,0,0,0:"));
-            SerialManager.write(this.makePacket("R", "13", "154:4:0,0,0,0:"));
+            console.log("requestInitialData");
+            SerialManager.write("#0121defID9999W13287:1:31:*");
         },
 
         triggerAlarm() { this.writeMap(287, [97]); },
@@ -752,16 +764,19 @@
             if (!frame || frame[0] !== "#" || frame[frame.length - 1] !== "*") {
                 return;
             }
+            // # + TrID(2) + Len(2) + DEVICEID(9) + RW(1) + CODE(2) + DATA(variable) + *
+            // #    01         35     EBF4FFFFF       r        13    154:04:000,000,001,001:*
 
             // AT 응답처럼 #RSRP=...* 형태가 섞여 들어오면 여기서 분기
             if (frame.startsWith("#RSRP=") ||
                 frame.startsWith("#RSSI=") ||
-                frame.startsWith("#BAT_AVR_FLOAT=") ||
+                frame.startsWith("#batVolt=") ||
                 frame.startsWith("#SIM=") ||
                 frame.startsWith("#tilt_x=") ||
                 frame.startsWith("#tilt_y=") ||
                 frame.startsWith("#CHARGER=") ||
                 frame.startsWith("#PKG_VER=")) {
+                
                 this.parseATFrame(frame);
                 return;
             }
@@ -772,16 +787,16 @@
 
             const body = frame.slice(1, -1); // #, * 제거
             if (body.length < 14) {
-                appendLog(`프레임 길이 부족: ${frame}`, "sys");
+                // [임시비활성] console.log(`프레임 길이 부족: ${frame}`, "sys");
                 return;
             }
 
+            
             const trId = body.slice(0, 2);
             const lenStr = body.slice(2, 4);
             const declaredLen = Number(lenStr);
-
             if (!Number.isFinite(declaredLen)) {
-                appendLog(`길이 필드 오류: ${frame}`, "sys");
+                // [임시비활성] console.log(`길이 필드 오류: ${frame}`, "sys");
                 return;
             }
 
@@ -789,13 +804,13 @@
 
             // 길이 검증은 '프레임을 자르는 기준'이 아니라 '검증용'
             if (payload.length !== declaredLen) {
-                appendLog(`길이 불일치 선언=${declaredLen}, 실제=${payload.length}, frame=${frame}`, "sys");
+                // [임시비활성] console.log(`길이 불일치 선언=${declaredLen}, 실제=${payload.length}, frame=${frame}`, "sys");
                 // 완전 폐기하지 말고 일단 계속 파싱해볼 수도 있음
                 // return;
             }
 
             if (payload.length < 12) {
-                appendLog(`payload 길이 부족: ${frame}`, "sys");
+                // [임시비활성] console.log(`payload 길이 부족: ${frame}`, "sys");
                 return;
             }
 
@@ -806,7 +821,7 @@
             const data = payload.slice(12);
 
             if (!Number.isFinite(codeNum)) {
-                appendLog(`CODE 파싱 실패: ${frame}`, "sys");
+                // [임시비활성] console.log(`CODE 파싱 실패: ${frame}`, "sys");
                 return;
             }
 
@@ -831,8 +846,8 @@
             if (line.includes("#RSRP=")) this.update("val-rsrp", this.ext(line, "#RSRP="));
             if (line.includes("#RSSI=")) this.update("val-rssi", this.ext(line, "#RSSI="));
 
-            if (line.includes("#BAT_AVR_FLOAT=")) {
-                const v = parseFloat(this.ext(line, "#BAT_AVR_FLOAT="));
+            if (line.includes("#batVolt=")) {
+                const v = parseFloat(this.ext(line, "#batVolt="));
                 this.update("val-battery", Number.isFinite(v) ? v.toFixed(2) + " V" : "-- V");
             }
 
@@ -872,6 +887,8 @@
         branchProcess(meta) {
             let data = meta.data || "";
 
+            // console.log(meta);
+
             // trailing ':' 제거
             if (data.endsWith(":")) {
                 data = data.slice(0, -1);
@@ -885,13 +902,20 @@
                 case 14:
                     this.handleCode14(data, meta);
                     break;
+                case 21:
+                    // id="inp-call-1"
+                    const phone = data.replace(/:/g, "");
+                    const el = document.getElementById("inp-call-1");
+                    if (el) el.value = phone;
 
+                    console.log("전화번호:", phone);
+                    break;
                 case 25:
                     this.handleCode25(data, meta);
                     break;
 
                 default:
-                    appendLog(`미처리 CODE=${meta.codeNum}, DATA=${data}`, "sys");
+                    console.log(`미처리 CODE=${meta.codeNum}, DATA=${data}`, "sys");
                     break;
             }
         },
@@ -901,62 +925,105 @@
         handleCode13(data, meta) {
             const parts = data.split(":");
             if (parts.length < 3) {
-                appendLog(`CODE13 형식 오류: ${meta.raw}`, "sys");
+                console.log(`CODE13 형식 오류: ${meta.raw}`, "sys");
+                return;
+            }
+            console.log(data);
+            const addr = Number(parts[0]);
+            const count = Number(parts[1]);
+
+            // 값 영역: 끝의 ':'들 제거, 내부 ':'는 (프로토콜상) 값 구분자로 쓰일 수도 있으니 일단 유지
+            let valuesStr = parts.slice(2).join(":").replace(/:+$/g, "");
+
+            // values 만들기:
+            // - 콤마가 있으면 배열형
+            // - 없으면 단일값형
+            // - 값에 ':'가 섞여있으면 제거(예: "063:" 같은 잔재)
+            let values = [];
+            if (valuesStr.length > 0) {
+                if (valuesStr.includes(",")) {
+                    values = valuesStr.split(",").map(s => s.replace(/:/g, "").trim()).filter(Boolean);
+                } else {
+                    values = [valuesStr.replace(/:/g, "").trim()].filter(Boolean);
+                }
+            }
+
+            if (Number.isFinite(count) && values.length !== count) {
+                console.log(`CODE13 count 불일치 addr=${addr}, count=${count}, values=${values.length}, raw=${valuesStr}`, "sys");
+            }
+
+            const v = values.map(x => Number(x) || 0);
+
+            console.log(v);
+
+            // SerialManager.write(this.makePacket("R", "14", "80,1:91,1:104,1:84,1:273,1:427,1:"));
+            // SerialManager.write(this.makePacket("R", "13", "28:9:0,0,0,0,0,0,0,0,0:"));
+
+            if (addr === 20) {
+                document.getElementById("touch_transmit").checked = SBA[1] = !!v[8];
+                document.getElementById("emerg_transmit").checked = SBA[2] = !!v[9];
+                return;
+            }
+            if (addr === 30) {
+                document.getElementById("touch_sms").checked = SBA[3] = !!v[0];
+                document.getElementById("emerg_sms").checked = SBA[4] = !!v[1];
+
+                document.getElementById("touch_light").checked = SBA[6] = !!v[2];
+                document.getElementById("emerg_light").checked = SBA[7] = !!v[3];
+                document.getElementById("touch_mp3").checked = SBA[8] = !!v[4];
+                document.getElementById("emerg_mp3").checked = SBA[9] = !!v[5];
                 return;
             }
 
-            const addr = Number(parts[0]);
-            const count = Number(parts[1]);
-            const valuesCsv = parts.slice(2).join(":");
-            const values = valuesCsv ? valuesCsv.split(",") : [];
-
-            if (Number.isFinite(count) && values.length !== count) {
-                appendLog(`CODE13 count 불일치 addr=${addr}, count=${count}, values=${values.length}`, "sys");
+            if (addr === 80) { // 스피커
+                document.getElementById("touch_alram").checked = SBA[0] = !!v[0];
+                document.getElementById('inp-vol-spk').value = v[5];
+                document.getElementById('inp-vol-mic').value = v[8];
+                return;
+            }
+            if (addr === 90) {
+                document.getElementById("emerg_alram").checked = SBA[5] = !!v[1];
+            }
+            if (addr === 100) {
+                document.getElementById("rf_alram").checked = SBA[10] = v[4];
             }
 
-            if (addr === 28) {
-                const v = values.map(x => Number(x) || 0);
-
-                document.getElementById("touch_transmit").checked = SBA[1] = !!v[0];
-                document.getElementById("emerg_transmit").checked = SBA[2] = !!v[1];
-                document.getElementById("touch_sms").checked = SBA[3] = !!v[2];
-                document.getElementById("emerg_sms").checked = SBA[4] = !!v[3];
-
-                // v[4] 는 현재 고정값/예약값처럼 보임
-                document.getElementById("touch_light").checked = SBA[6] = !!v[5];
-                document.getElementById("emerg_light").checked = SBA[7] = !!v[6];
-                document.getElementById("touch_mp3").checked = SBA[8] = !!v[7];
-                document.getElementById("emerg_mp3").checked = SBA[9] = !!v[8];
+            if (addr === 130) {
+                document.getElementById('inp-vol-mp3').value = v[9];
+                return;
             }
-            else if (addr === 154) {
-                const v = values.map(x => Number(x) || 0);
 
-                document.getElementById("rf_transmit").checked = SBA[11] = !!v[0];
-                document.getElementById("rf_sms").checked = SBA[12] = !!v[1];
-                document.getElementById("rf_light").checked = SBA[13] = !!v[2];
-                document.getElementById("rf_mp3").checked = SBA[14] = !!v[3];
+            if (addr === 150) {
+                document.getElementById("rf_transmit").checked = SBA[11] = !!v[4];
+                document.getElementById("rf_sms").checked = SBA[12] = !!v[5];
+                document.getElementById("rf_light").checked = SBA[13] = !!v[6];
+                document.getElementById("rf_mp3").checked = SBA[14] = !!v[7];
+                return;
             }
-            else if (addr === 200 || addr === 212) {
-                // 서버 IP 읽기 응답 처리 예비
-                // 예: 200:6:192,168,0,1,47,68
-                if (values.length >= 6) {
-                    const ip = `${values[0]}.${values[1]}.${values[2]}.${values[3]}`;
-                    const port = Number(values[4]) * 256 + Number(values[5]);
+
+            if (addr === 200 || addr === 212) {
+                if (v.length >= 6) {
+                    const ip = `${v[0]}.${v[1]}.${v[2]}.${v[3]}`;
+                    const port = v[4] * 256 + v[5];
                     const text = `${ip}:${port}`;
-
                     if (addr === 200) document.getElementById("inp-main-ip").value = text;
                     if (addr === 212) document.getElementById("inp-dms-ip").value = text;
                 }
+                return;
             }
-            else if (addr === 357) {
-                // 보조 관제 번호 응답 처리 예비
+
+            if (addr === 357) {
+                // 여기만은 숫자→문자 변환이 목적이라 values(문자열) 기반이 더 안전함
                 const phone = values
-                    .map(v => Number(v))
-                    .filter(v => Number.isFinite(v) && v > 0)
-                    .map(v => String.fromCharCode(v))
+                    .map(s => Number(s))
+                    .filter(n => Number.isFinite(n) && n > 0)
+                    .map(n => String.fromCharCode(n))
                     .join("");
                 document.getElementById("inp-call-2").value = phone;
+                return;
             }
+
+            console.log(`CODE13 미처리 addr=${addr}, count=${count}, values=${valuesStr}`, "sys");
         },
 
         // CODE 14
@@ -965,6 +1032,7 @@
             const segments = data.split(":").filter(Boolean);
 
             for (const seg of segments) {
+                console.log("code 14")
                 const pair = seg.split(",");
                 if (pair.length < 2) continue;
 
@@ -973,9 +1041,9 @@
 
                 if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
 
-                if (a === 80)  document.getElementById("touch_alram").checked = SBA[0] = !!b;
-                if (a === 91)  document.getElementById("emerg_alram").checked = SBA[5] = !!b;
-                if (a === 104) document.getElementById("rf_alram").checked = SBA[10] = !!b;
+
+                
+                
 
                 if (a === 84)  document.getElementById("sys_amp").checked = !!b;
                 if (a === 273) document.getElementById("sys_buzzer").checked = !!b;
@@ -986,7 +1054,7 @@
         // CODE 25
         // RF 읽기 응답용 자리
         handleCode25(data, meta) {
-            appendLog(`RF 응답: ${data}`, "sys");
+            console.log(`RF 응답: ${data}`, "sys");
         }
     };
 
