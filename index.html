@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.6</div>
+<div>Version 1.1.6</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -646,8 +646,22 @@
         }
     };
 
-    // Android 브리지
-    // Android 에서도 한 줄이 아니라 임의 chunk 로 본다.
+    // ==========================================
+    // Android 브리지 수신부 (갱신)
+    // ==========================================
+
+    // 1. Base64로 인코딩된 데이터를 받는 전용 함수 (데이터 깨짐 완벽 방지)
+    window.receiveBase64FromAndroid = function(base64Data) {
+        try {
+            // atob로 디코딩 후, 한글/특수문자 깨짐을 방지하기 위해 UTF-8로 복원
+            const rawString = decodeURIComponent(escape(atob(base64Data)));
+            SerialManager.onReceiveChunk(rawString);
+        } catch (e) {
+            console.error("Base64 디코딩 에러 (데이터 무시):", e);
+        }
+    };
+
+    // 2. 기존 일반 데이터 수신 브리지 (PC 시리얼이나 구버전 호환용으로 유지)
     window.receiveDataFromAndroid = function(data) {
         SerialManager.onReceiveChunk(data);
     };
@@ -776,54 +790,34 @@
             if (!frame || frame[0] !== "#" || frame[frame.length - 1] !== "*") {
                 return;
             }
-            // # + TrID(2) + Len(2) + DEVICEID(9) + RW(1) + CODE(2) + DATA(variable) + *
-            // #    01         35     EBF4FFFFF       r        13    154:04:000,000,001,001:*
 
-            // AT 응답처럼 #RSRP=...* 형태가 섞여 들어오면 여기서 분기
-            if (frame.startsWith("#RSRP=") ||
-                frame.startsWith("#RSSI=") ||
-                frame.startsWith("#batVolt=") ||
-                frame.startsWith("#SIM=") ||
-                frame.startsWith("#tilt_x=") ||
-                frame.startsWith("#tilt_y=") ||
-                frame.startsWith("#CHARGER=") ||
-                frame.startsWith("#PKG_VER=")) {
-                
+            // AT 응답 등 특수 프레임 처리
+            if (frame.startsWith("#RSRP=") || frame.startsWith("#RSSI=") || 
+                frame.startsWith("#batVolt=") || frame.startsWith("#SIM=") || 
+                frame.startsWith("#tilt_x=") || frame.startsWith("#tilt_y=") || 
+                frame.startsWith("#CHARGER=") || frame.startsWith("#PKG_VER=")) {
                 this.parseATFrame(frame);
                 return;
             }
 
-            if (frame.startsWith("#OK")) {
-                return;
-            }
+            if (frame.startsWith("#OK")) return;
 
             const body = frame.slice(1, -1); // #, * 제거
-            if (body.length < 14) {
-                // [임시비활성] console.log(`프레임 길이 부족: ${frame}`, "sys");
-                return;
-            }
+            if (body.length < 14) return;
 
-            
             const trId = body.slice(0, 2);
             const lenStr = body.slice(2, 4);
             const declaredLen = Number(lenStr);
-            if (!Number.isFinite(declaredLen)) {
-                // [임시비활성] console.log(`길이 필드 오류: ${frame}`, "sys");
-                return;
-            }
+            
+            if (!Number.isFinite(declaredLen)) return;
 
             const payload = body.slice(4);
 
-            // 길이 검증은 '프레임을 자르는 기준'이 아니라 '검증용'
+            // 🚨 [핵심 수정] 하드웨어 통신 충돌로 인해 데이터가 유실된 경우 (길이 불일치)
+            // 파싱을 중단하고 과감하게 프레임을 버립니다! (앱 오작동 방지)
             if (payload.length !== declaredLen) {
-                // [임시비활성] console.log(`길이 불일치 선언=${declaredLen}, 실제=${payload.length}, frame=${frame}`, "sys");
-                // 완전 폐기하지 말고 일단 계속 파싱해볼 수도 있음
-                // return;
-            }
-
-            if (payload.length < 12) {
-                // [임시비활성] console.log(`payload 길이 부족: ${frame}`, "sys");
-                return;
+                console.warn(`[데이터 유실 차단] 선언길이:${declaredLen} vs 실제길이:${payload.length} -> 프레임 폐기:`, frame);
+                return; // ⬅️ 이 부분을 반드시 살려야 좀비 데이터로 인한 에러를 막습니다.
             }
 
             const targetId = payload.slice(0, 9);
@@ -832,21 +826,9 @@
             const codeNum = Number(codeStr);
             const data = payload.slice(12);
 
-            if (!Number.isFinite(codeNum)) {
-                // [임시비활성] console.log(`CODE 파싱 실패: ${frame}`, "sys");
-                return;
-            }
+            if (!Number.isFinite(codeNum)) return;
 
-            const meta = {
-                raw: frame,
-                trId,
-                declaredLen,
-                targetId,
-                rw,
-                codeStr,
-                codeNum,
-                data
-            };
+            const meta = { raw: frame, trId, declaredLen, targetId, rw, codeStr, codeNum, data };
 
             this.branchProcess(meta);
         },
