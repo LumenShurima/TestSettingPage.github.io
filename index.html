@@ -613,6 +613,7 @@
                 const frame = this.rxBuffer.slice(0, end + 1);
                 this.rxBuffer = this.rxBuffer.slice(end + 1);
 
+                appendLog(frame + "\n");
                 DeviceParser.parseFrame(frame);
             }
         },
@@ -1092,4 +1093,5 @@
 </script>
 </body>
 </html>
+
 
