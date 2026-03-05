@@ -167,7 +167,7 @@
 </head>
 <body>
 <!-- Page Version -->
-<div>Version 1.0.1</div>
+<div>Version 1.0.2</div>
 <div class="app-container">
 
     <!-- 사이드바 오버레이 (바탕 클릭시 닫힘) -->
@@ -573,7 +573,7 @@
             chunk = String(chunk).replace(/\0/g, "");
 
             // ❌ 문제의 원인: 여기서 조각(chunk) 단위로 로그를 찍으면 안드로이드에서 줄바꿈이 폭발합니다.
-            appendLog(chunk, "rx"); 
+            // appendLog(chunk, "rx"); 
 
             // 2. 버퍼에 날것 그대로 누적
             this.rxBuffer += chunk;
@@ -1093,6 +1093,7 @@
 </script>
 </body>
 </html>
+
 
 
 
