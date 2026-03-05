@@ -567,18 +567,14 @@
         onReceiveChunk(chunk) {
             if (!chunk) return;
 
+            // 1. NUL 문자만 제거하고, \r, \n은 절대로 지우지 않습니다.
+            // (통신 프로토콜에서 \n은 문장의 끝을 알리는 중요한 역할을 할 수 있습니다)
+            chunk = String(chunk).replace(/\0/g, "");
 
-            // Android 쪽에서 흔히 섞이는 문자 정리
-            chunk = String(chunk)
-                .replace(/\0/g, "")    // NUL 제거
-                .replace(/\r/g, "")    // CR 제거
-                // \n은 데이터에 의미가 없으면 제거해도 됨
-                .replace(/\n/g, "");
+            // ❌ 문제의 원인: 여기서 조각(chunk) 단위로 로그를 찍으면 안드로이드에서 줄바꿈이 폭발합니다.
+            // appendLog(chunk, "rx"); 
 
-            // 로그는 raw chunk 단위로 남김
-            appendLog(chunk, "rx");
-
-            // 버퍼에 누적
+            // 2. 버퍼에 날것 그대로 누적
             this.rxBuffer += chunk;
 
             // 너무 길어져서 비정상 누적되는 경우 보호
@@ -588,33 +584,71 @@
                 console.log("수신 버퍼 정리 수행", "sys");
             }
 
+            // 3. 누적된 버퍼에서 완성된 프레임 추출 시도
             this.extractFrames();
         },
 
         extractFrames() {
-            while (true) {
-                // 시작 문자 '#'
-                let start = this.rxBuffer.indexOf("#");
-                if (start < 0) {
-                    this.rxBuffer = "";
+            // 버퍼에 데이터가 있는 동안 계속 검사
+            while (this.rxBuffer.length > 0) {
+                
+                // 패킷의 시작인 '#' 찾기
+                let startIdx = this.rxBuffer.indexOf("#");
+                
+                if (startIdx < 0) {
+                    // '#'이 아예 없다면, 혹시 '\n' 단위의 단순 응답(예: "OK\r\n")이 있는지 확인
+                    let nlIdx = this.rxBuffer.indexOf("\n");
+                    if (nlIdx >= 0) {
+                        let text = this.rxBuffer.slice(0, nlIdx).trim();
+                        if (text) {
+                            appendLog(text, "rx"); // 단순 응답 로그 출력
+                        }
+                        this.rxBuffer = this.rxBuffer.slice(nlIdx + 1);
+                        continue;
+                    }
+                    // '#'도 '\n'도 없으면 다음 조각(chunk)을 기다림
                     return;
                 }
 
-                // 시작 전 쓰레기 데이터 제거
-                if (start > 0) {
-                    this.rxBuffer = this.rxBuffer.slice(start);
+                // '#' 앞부분에 쌓인 쓰레기 데이터는 버림
+                if (startIdx > 0) {
+                    this.rxBuffer = this.rxBuffer.slice(startIdx);
+                    startIdx = 0; // 버퍼를 잘라냈으므로 '#'의 위치는 다시 0
                 }
 
-                // 종료 문자 '*'
-                const end = this.rxBuffer.indexOf("*", 1);
-                if (end < 0) {
-                    // 아직 프레임 미완성
-                    return;
+                // 프레임의 끝을 알리는 기호 찾기 ('*' 또는 '\n')
+                // 기기 응답이 #...* 일 수도 있고, #...\n 일 수도 있으므로 둘 다 확인
+                let endStarIdx = this.rxBuffer.indexOf("*", 1);
+                let endNlIdx = this.rxBuffer.indexOf("\n", 1);
+                
+                let endIndex = -1;
+
+                if (endStarIdx >= 0 && endNlIdx >= 0) {
+                    endIndex = Math.min(endStarIdx, endNlIdx); // 먼저 오는 것을 끝으로 간주
+                } else if (endStarIdx >= 0) {
+                    endIndex = endStarIdx;
+                } else if (endNlIdx >= 0) {
+                    endIndex = endNlIdx;
                 }
 
-                const frame = this.rxBuffer.slice(0, end + 1);
-                this.rxBuffer = this.rxBuffer.slice(end + 1);
+                // 끝 문자가 아직 안 들어왔다면 (데이터가 덜 들어옴) 다음 조각을 기다림
+                if (endIndex < 0) {
+                    return; 
+                }
 
+                // === 하나의 완성된 프레임 추출 성공 ===
+                // 시작부터 끝 문자까지 잘라냄
+                let frame = this.rxBuffer.slice(0, endIndex + 1).trim();
+                
+                // 처리한 부분은 버퍼에서 삭제
+                this.rxBuffer = this.rxBuffer.slice(endIndex + 1);
+
+                if (!frame) continue;
+
+                // 💡 해결의 핵심: '완성된 하나의 프레임' 단위로만 로그를 찍습니다!
+                appendLog(frame, "rx");
+
+                // 파서로 전달 (예: #0121defID9999W13287:1:31:* 형태)
                 DeviceParser.parseFrame(frame);
             }
         },
@@ -1094,4 +1128,3 @@
 </script>
 </body>
 </html>
-
